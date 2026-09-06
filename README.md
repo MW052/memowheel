@@ -194,6 +194,11 @@ fonts (Assistant, Frank Ruhl Libre, Cutive Mono) are **not** covered by MIT —
 they ship under the SIL Open Font License, with their notices kept alongside the
 font files (`*-OFL.txt`, `OFL-NOTICE.txt`).
 
+The MIT License already asks that the copyright notice be kept in copies and
+derivatives. Beyond that, if you build on Memowheel or reuse its code, a visible
+credit to the original author, **Michael Weiss**, is appreciated (though not
+required).
+
 ## Known gaps / follow-ups
 
 - **Zero-install not yet proven on a Python-free box:** the build runs and is
