@@ -25,6 +25,7 @@ from db.schema import get_connection, DEFAULT_DB_PATH
 from ingest.clustering import DEFAULT_GAP_THRESHOLD_MINUTES
 from ingest.faces import assess_enrollment, save_enrollment, load_enrolled
 from ingest.dates import media_capture_date
+from ingest import geo
 from ingest.itinerary import parse_itinerary
 from ingest.pipeline import run_ingest, _iter_media_files, classify_media, PHOTO_EXTENSIONS
 from review_app.db import get_db
@@ -42,6 +43,8 @@ _import_status = {
     "state": "idle", "processed": 0, "total": 0, "message": "",
     # Date-filter outcome, surfaced on the finish card:
     "date_filtered": False, "skipped_out_of_range": 0, "included_undated": 0,
+    # Place-filter outcome (find-by-place mode):
+    "place_filtered": False, "skipped_out_of_place": 0,
 }
 
 
@@ -318,6 +321,35 @@ def scan_folder(path: str, exclude: str = ""):
     }
 
 
+@router.get("/setup/scan-places")
+def scan_places(path: str, exclude: str = ""):
+    """Discover the distinct places in a folder from its photos' GPS tags, for the
+    'Find my trip by place' mode: 'Lisbon, Lisboa - 214 · Sintra, Lisboa - 61 · No
+    location - 240'. Fully offline (reverse_geocoder's bundled city database - no
+    API key, no coordinate leaves the machine). Read-only."""
+    folder = Path(path)
+    if not folder.is_dir():
+        raise HTTPException(status_code=400, detail=f"Folder not found: {path}")
+    exclude_dirs = {s.strip() for s in exclude.split(",") if s.strip()} or None
+    result = geo.scan_places(folder, exclude_dirs)
+    result["ok"] = True
+    result["no_location_token"] = geo.NO_LOCATION
+    return result
+
+
+@router.get("/setup/geocode")
+def geocode_place(q: str):
+    """A typed place name -> a coordinate + canonical label, offline. The wizard
+    uses the point to auto-select every discovered place within a radius, so
+    typing 'Lisbon' catches suburb-labelled photos too. 404 when nothing matches."""
+    hit = geo.geocode(q)
+    if hit is None:
+        raise HTTPException(status_code=404, detail=f"No place found for {q!r}.")
+    hit["ok"] = True
+    hit["radius_km"] = geo.DEFAULT_RADIUS_KM
+    return hit
+
+
 @router.get("/setup/thumbs")
 def setup_thumbs(path: str, n: int = 5):
     """A handful of photo paths spread across the chosen folder, so the wizard can
@@ -374,6 +406,7 @@ def start_import(
     exclude: str = Form(""),
     date_start: str = Form(""),
     date_end: str = Form(""),
+    places: str = Form(""),
     conn=Depends(get_db),
 ):
     if _get_status()["state"] == "running":
@@ -390,6 +423,21 @@ def start_import(
         raise HTTPException(status_code=400, detail="Start date is after the end date.")
     date_filtered = start is not None or end is not None
 
+    # Selected place labels (find-by-place mode). Carried as a JSON array because
+    # labels contain commas ("Lisbon, Lisboa"). Empty/absent -> no place filter.
+    selected_places = None
+    if places.strip():
+        try:
+            parsed = json.loads(places)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid places selection.")
+        if not isinstance(parsed, list) or not all(isinstance(p, str) for p in parsed):
+            raise HTTPException(status_code=400, detail="Invalid places selection.")
+        selected_places = [p for p in parsed if p]
+        if not selected_places:
+            raise HTTPException(status_code=400, detail="Select at least one place.")
+    place_filtered = selected_places is not None
+
     enrolled = load_enrolled(conn)
     if not enrolled:
         raise HTTPException(status_code=400, detail="Enroll at least one person first.")
@@ -399,7 +447,8 @@ def start_import(
     # triggers a per-photo search.
     exclude_dirs = {s.strip() for s in exclude.split(",") if s.strip()} or None
     _set_status(state="running", processed=0, total=0, message="Starting…",
-                date_filtered=date_filtered, skipped_out_of_range=0, included_undated=0)
+                date_filtered=date_filtered, skipped_out_of_range=0, included_undated=0,
+                place_filtered=place_filtered, skipped_out_of_place=0)
 
     def job():
         def cb(processed, total, message):
@@ -412,10 +461,11 @@ def start_import(
         try:
             counts = run_ingest(str(folder_path), enrolled, gap_threshold_minutes,
                                 exclude_dirs=exclude_dirs, progress_cb=cb,
-                                date_start=start, date_end=end)
+                                date_start=start, date_end=end, places=selected_places)
             _set_status(state="done", message="Import complete.",
                         skipped_out_of_range=counts["skipped_out_of_range"],
-                        included_undated=counts["included_undated"])
+                        included_undated=counts["included_undated"],
+                        skipped_out_of_place=counts["skipped_out_of_place"])
         except Exception as e:  # surfaced to the UI, never crashes the server
             _set_status(state="error", message=f"{type(e).__name__}: {e}")
 

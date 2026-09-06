@@ -28,12 +28,5 @@ FEATURES = [
         "status": "soon",
         "url": None,
     },
-    {
-        "key": "morph",
-        "name": "Face Morph",
-        "emoji": "✨",
-        "desc": "Morph a person's face across photos over the years.",
-        "status": "soon",
-        "url": None,
-    },
+    # Face Morph is being developed separately - intentionally not shown on the hub.
 ]

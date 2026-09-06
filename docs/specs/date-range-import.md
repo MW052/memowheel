@@ -1,6 +1,19 @@
 # Spec: Import photos by trip date range
 
-Status: proposed · Author: Michael Weiss · 2026-08-17
+Status: LANDED (Phase 1) + extended into a find-mode fork · Author: Michael Weiss · 2026-08-17
+
+> **Update 2026-08-29.** Phase 1 shipped as specced (the `media_capture_date`
+> helper, the two-pass filter, wizard inputs + itinerary prefill, i18n, CLI
+> `--from/--to`). It was then reframed from a filter tucked under the folder step
+> into an explicit **Step-1 mode fork** — *I have a trip folder · Find my trip by
+> dates · Find my trip by place* — and a **find-by-place** mode was added on the
+> same two-pass engine: `ingest/geo.py` reverse-geocodes the folder's own GPS
+> tags into "City, Region" buckets (offline, via the bundled `reverse_geocoder`
+> dataset — no API, nothing leaves the machine), the user ticks the places (or
+> types one, forward-geocoded offline, to sweep it + its suburbs within a
+> radius), and `ingest_phase1(places=...)` keeps only the selected labels
+> (`geo.NO_LOCATION` = the un-geotagged bucket). Routes: `GET /setup/scan-places`,
+> `GET /setup/geocode`. CLI: `ingest --list-places` and `--places "A;B"`.
 
 ## 1. Problem
 

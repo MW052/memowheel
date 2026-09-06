@@ -59,7 +59,12 @@ try {
   # through a PowerShell pipeline would corrupt it).
   git archive --format=tar -o $tar $SourceRef
   if ($LASTEXITCODE -ne 0) { throw "git archive of $SourceRef failed." }
-  tar -x -f $tar -C $tmp
+  # Use Windows' bundled bsdtar explicitly. A bare `tar` can resolve to Git's GNU
+  # tar, which misreads a `C:\...tar` path as a remote host ("Cannot connect to
+  # C:") and fails; bsdtar handles drive letters natively.
+  $tarExe = Join-Path $env:SystemRoot "System32\tar.exe"
+  if (-not (Test-Path $tarExe)) { $tarExe = "tar" }
+  & $tarExe -x -f $tar -C $tmp
   if ($LASTEXITCODE -ne 0) { throw "tar extract failed." }
 
   # Inherit committer identity from the outer repo if the clone lacks one.

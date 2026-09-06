@@ -51,7 +51,7 @@ exe**, so keep the folder somewhere writable (Desktop, Documents - not
   PATH. No direct `ffprobe`/`ffmpeg` subprocess calls remain.
 - **No face-model download:** the YuNet + SFace ONNX models are bundled in-repo
   under `models/faces/` and picked up by the spec, so the first enroll works fully
-  offline (this replaced insightface's ~few-hundred-MB `buffalo_l` first-run fetch).
+  offline (the YuNet + SFace models are bundled, so there is no first-run download).
 - **Size:** the folder will be large (roughly 1-2 GB) because of OpenCV and
   friends. A one-file build is possible but slower to start and often flakier
   with native deps; one-folder is recommended.

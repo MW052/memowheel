@@ -733,6 +733,27 @@ html[lang="he"] .scan-dates{font-family:var(--sans)}
 .adv-inline .field{margin-top:12px}
 .wiz-card .info-note{margin-top:18px}
 
+/* step 1: "how do you want to find your trip?" mode chooser */
+.find-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:4px 0 20px}
+.find-mode-card{align-items:center;text-align:center;padding:18px 14px;gap:6px}
+.find-mode-card .fm-ico{color:var(--terra);margin-bottom:2px}
+.find-mode-card .tile-name{font-size:16px;text-align:center}
+.find-mode-card .tile-desc{text-align:center;font-size:13px}
+.mode-hint{color:var(--muted);font-size:14px;margin:0 0 12px}
+@media(max-width:640px){.find-modes{grid-template-columns:1fr}}
+
+/* step 1: discovered-places checklist (find by place) */
+.places-block > label{display:block;font-weight:600;margin-bottom:2px}
+.places-list{display:flex;flex-direction:column;gap:2px;max-height:260px;overflow-y:auto;
+  border:1px solid var(--n1);border-radius:var(--r-md);padding:6px;background:var(--paper)}
+.place-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer}
+.place-row:hover{background:var(--card)}
+.place-row input{flex:0 0 auto;width:17px;height:17px;accent-color:var(--terra);margin:0}
+.place-row .pl-name{flex:1;min-width:0;font-size:14.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.place-row .pl-count{flex:0 0 auto;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.place-row.pl-none .pl-name{color:var(--muted);font-style:italic}
+.place-search-note{font-size:13px;color:var(--muted)}
+
 /* step 2: people cards */
 .people-list{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
 .person-card{display:flex;align-items:center;gap:16px;background:var(--paper);border:1px solid var(--n1);

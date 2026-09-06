@@ -13,6 +13,31 @@
     <div class="step-head"><span class="step-badge">01</span><h2>{{ t('setup.wiz.photos_h') }}</h2></div>
     <p class="step-sub">{{ t('setup.wiz.photos_sub') }}</p>
 
+    <!-- How to find the trip: whole folder, by dates, or by place (GPS). All three
+         share one folder-pick + scan; they differ only in the filter applied. -->
+    <div class="find-modes" role="radiogroup" aria-label="{{ t('setup.wiz.mode_h') }}">
+      <input type="hidden" id="find-mode" value="folder">
+      <button type="button" class="tile find-mode-card sel" data-mode="folder" role="radio" aria-checked="true" onclick="setFindMode('folder')">
+        <span class="fm-ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+        <span class="tile-name">{{ t('setup.wiz.mode_folder') }}</span>
+        <span class="tile-desc">{{ t('setup.wiz.mode_folder_q') }}</span>
+        <span class="tile-check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l4 4 10-11"/></svg></span>
+      </button>
+      <button type="button" class="tile find-mode-card" data-mode="dates" role="radio" aria-checked="false" onclick="setFindMode('dates')">
+        <span class="fm-ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></span>
+        <span class="tile-name">{{ t('setup.wiz.mode_dates') }}</span>
+        <span class="tile-desc">{{ t('setup.wiz.mode_dates_q') }}</span>
+        <span class="tile-check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l4 4 10-11"/></svg></span>
+      </button>
+      <button type="button" class="tile find-mode-card" data-mode="place" role="radio" aria-checked="false" onclick="setFindMode('place')">
+        <span class="fm-ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+        <span class="tile-name">{{ t('setup.wiz.mode_place') }}</span>
+        <span class="tile-desc">{{ t('setup.wiz.mode_place_q') }}</span>
+        <span class="tile-check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l4 4 10-11"/></svg></span>
+      </button>
+    </div>
+    <p class="mode-hint" id="mode-hint">{{ t('setup.wiz.mode_folder_hint') }}</p>
+
     <div class="choose-row">
       <div class="choose-col">
         <input type="hidden" id="import_folder">
@@ -38,6 +63,24 @@
             <div class="quality" id="date-itin-note" style="display:none;margin-top:4px">
               {{ t('setup.wiz.dates_from_itinerary') }}
               <button type="button" class="btn btn-ghost" style="padding:0 6px" onclick="resetDatesToItinerary()">{{ t('setup.wiz.dates_reset') }}</button>
+            </div>
+          </div>
+
+          <div class="field places-block" id="places-block" style="display:none;margin-top:12px">
+            <label>{{ t('setup.wiz.places_label') }}</label>
+            <div class="quality" style="margin-bottom:8px">{{ t('setup.wiz.places_hint') }}</div>
+            <div class="place-search-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+              <input type="text" id="place-search" placeholder="{{ t('setup.wiz.places_search_ph') }}"
+                     style="max-width:220px" onkeydown="if(event.key==='Enter'){event.preventDefault();geocodeTyped();}">
+              <button type="button" class="btn btn-secondary" onclick="geocodeTyped()">{{ t('setup.wiz.places_search_btn') }}</button>
+              <span class="place-search-note" id="place-search-note"></span>
+            </div>
+            <div id="places-loading" class="scan-loading" style="display:none">{{ t('setup.wiz.places_loading') }}</div>
+            <div id="places-list" class="places-list"></div>
+            <div class="quality places-attrib" style="margin-top:8px">
+              {{ t('setup.wiz.places_attrib') }}
+              <a href="https://www.geonames.org/" target="_blank" rel="noopener noreferrer">GeoNames</a>,
+              <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC&nbsp;BY&nbsp;4.0</a>
             </div>
           </div>
 
@@ -473,6 +516,111 @@ function applyDates(r) {
 function resetDatesToItinerary() { if (itineraryRange) applyDates(itineraryRange); }
 function chooseTripFolder() { openPicker('import_folder'); }
 
+// ---- step 1: find-mode (whole folder / by dates / by place) ----
+// One folder pick + scan feeds all three; the mode only decides which filter
+// panel shows and what the import posts. 'folder' = import everything; 'dates' =
+// keep the date window; 'place' = keep the ticked places (from GPS tags).
+let scannedCount = 0;              // photos+clips from the last scan
+let placesLoaded = false;          // whether scan-places ran for the current folder
+let discoveredPlaces = [];         // [{label, lat, lon, count}] from scan-places
+function findMode() { return document.getElementById('find-mode').value; }
+function setFindMode(mode) {
+  document.getElementById('find-mode').value = mode;
+  document.querySelectorAll('.find-mode-card').forEach(c => {
+    const on = c.dataset.mode === mode;
+    c.classList.toggle('sel', on); c.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+  document.getElementById('mode-hint').textContent = t('setup.wiz.mode_' + mode + '_hint');
+  applyModeUI();
+}
+function applyModeUI() {
+  const mode = findMode();
+  const scanned = document.getElementById('scan-result').style.display === 'block';
+  document.getElementById('date-range').style.display = (mode === 'dates' && scanned && scannedCount) ? 'block' : 'none';
+  document.getElementById('places-block').style.display = (mode === 'place' && scanned) ? 'block' : 'none';
+  if (mode === 'place' && scanned && !placesLoaded) loadPlaces(document.getElementById('import_folder').value);
+  updateContinueGate();
+}
+function updateContinueGate() {
+  const scanned = document.getElementById('scan-result').style.display === 'block';
+  let ok = scanned && scannedCount > 0;
+  if (findMode() === 'place') ok = scanned && placesSelected().length > 0;
+  document.getElementById('s1-continue').disabled = !ok;
+}
+
+// ---- step 1 (place mode): discover places from GPS, pick which are the trip ----
+async function loadPlaces(path) {
+  const excl = document.getElementById('exclude').value;
+  const list = document.getElementById('places-list'), loading = document.getElementById('places-loading');
+  list.innerHTML = ''; loading.style.display = 'block';
+  document.getElementById('place-search-note').textContent = '';
+  try {
+    const d = await (await fetch('/setup/scan-places?path=' + encodeURIComponent(path) + '&exclude=' + encodeURIComponent(excl))).json();
+    loading.style.display = 'none';
+    discoveredPlaces = d.places || [];
+    renderPlaces(d);
+    placesLoaded = true;
+  } catch (e) {
+    loading.style.display = 'none';
+    list.textContent = tf('setup.js.failed', { detail: e });
+  }
+}
+function placeRow(value, name, count, lat, lon, isNone) {
+  const row = document.createElement('label');
+  row.className = 'place-row' + (isNone ? ' pl-none' : '');
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.value = value;
+  if (lat != null) { cb.dataset.lat = lat; cb.dataset.lon = lon; }
+  cb.addEventListener('change', updateContinueGate);
+  const nm = document.createElement('span'); nm.className = 'pl-name'; nm.dir = 'auto'; nm.textContent = name;
+  const ct = document.createElement('span'); ct.className = 'pl-count'; ct.textContent = count;
+  row.append(cb, nm, ct);
+  return row;
+}
+function renderPlaces(d) {
+  const list = document.getElementById('places-list');
+  list.innerHTML = '';
+  if (!(d.places || []).length && !d.no_location) {
+    list.innerHTML = '<div class="quality" style="padding:10px">' + t('setup.wiz.places_none') + '</div>';
+    updateContinueGate(); return;
+  }
+  (d.places || []).forEach(p => list.appendChild(placeRow(p.label, p.label, p.count, p.lat, p.lon, false)));
+  if (d.no_location) list.appendChild(placeRow(d.no_location_token, t('setup.wiz.places_no_location'), d.no_location, null, null, true));
+  updateContinueGate();
+}
+function placesSelected() {
+  return [...document.querySelectorAll('#places-list input:checked')].map(cb => cb.value);
+}
+function haversineKm(la1, lo1, la2, lo2) {
+  const R = 6371, r = Math.PI / 180;
+  const dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
+  const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dLo / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+// Typed place -> offline coordinate -> tick every discovered place within radius,
+// so "Lisbon" also catches suburb-labelled photos (Sintra, Belém, …).
+async function geocodeTyped() {
+  const q = document.getElementById('place-search').value.trim();
+  const note = document.getElementById('place-search-note');
+  if (!q) return;
+  note.textContent = t('setup.wiz.places_searching');
+  let d;
+  try {
+    const res = await fetch('/setup/geocode?q=' + encodeURIComponent(q));
+    if (!res.ok) { note.textContent = tf('setup.wiz.places_not_found', { q: q }); return; }
+    d = await res.json();
+  } catch (e) { note.textContent = tf('setup.js.failed', { detail: e }); return; }
+  const radius = d.radius_km || 60;
+  let hit = 0;
+  document.querySelectorAll('#places-list input').forEach(cb => {
+    if (cb.dataset.lat == null) return;  // skip the "No location" row
+    if (haversineKm(+d.lat, +d.lon, +cb.dataset.lat, +cb.dataset.lon) <= radius) { cb.checked = true; hit++; }
+  });
+  note.textContent = hit ? tf('setup.wiz.places_selected_near', { n: hit, place: q })
+                         : tf('setup.wiz.places_none_near', { place: q });
+  updateContinueGate();
+}
+
 // ---- drag-and-drop / upload import ----
 // Files dropped or chosen (from Phone Link, Explorer, a download, anywhere) are
 // uploaded to the server, which saves them into the project's media store and
@@ -552,6 +700,7 @@ function uploadChosen(input, fromDrop) {
 }
 async function scanFolder(path) {
   const excl = document.getElementById('exclude').value;
+  placesLoaded = false; discoveredPlaces = [];  // new folder -> re-discover places on demand
   document.getElementById('dropzone').style.display = 'none';
   document.getElementById('scan-result').style.display = 'none';
   document.getElementById('scan-loading').style.display = 'block';
@@ -566,9 +715,9 @@ async function scanFolder(path) {
     document.getElementById('scan-counts').textContent = tf('setup.wiz.found', { photos: d.photos, clips: d.clips });
     // Prefill the date filter: itinerary range wins, else the scan-detected range.
     applyDates(itineraryRange || { start: d.date_start, end: d.date_end });
-    document.getElementById('date-range').style.display = (d.photos + d.clips) ? 'block' : 'none';
+    scannedCount = d.photos + d.clips;
     document.getElementById('scan-result').style.display = 'block';
-    document.getElementById('s1-continue').disabled = (d.photos + d.clips === 0);
+    applyModeUI();  // reveal the active mode's filter panel + set the continue gate
     renderImportFolderLine();
     loadThumbs(path);
   } catch (e) {
@@ -814,13 +963,20 @@ function phasesFor(s) {
 async function startImport() {
   const folder = document.getElementById('import_folder').value.trim();
   if (!folder) { alert(t('setup.js.choose_folder_first')); goStep(1); return; }
+  const mode = findMode();
   const body = new URLSearchParams({
     folder,
     gap_threshold_minutes: document.getElementById('gap').value,
     exclude: document.getElementById('exclude').value,
-    date_start: document.getElementById('date_start').value,
-    date_end: document.getElementById('date_end').value,
   });
+  if (mode === 'dates') {
+    body.set('date_start', document.getElementById('date_start').value);
+    body.set('date_end', document.getElementById('date_end').value);
+  } else if (mode === 'place') {
+    const picked = placesSelected();
+    if (!picked.length) { alert(t('setup.wiz.places_pick_first')); goStep(1); return; }
+    body.set('places', JSON.stringify(picked));
+  }
   const res = await fetch('/setup/import', { method: 'POST', body });
   if (!res.ok) { const d = await res.json(); alert(tf('setup.js.failed', { detail: d.detail })); return; }
   document.getElementById('import-btn').disabled = true;
@@ -842,6 +998,7 @@ async function poll() {
       if (s.skipped_out_of_range) summary += ' ' + tf('setup.wiz.finish_skipped', { n: s.skipped_out_of_range });
       if (s.included_undated) summary += ' ' + tf('setup.wiz.finish_undated', { n: s.included_undated });
     }
+    if (s.place_filtered && s.skipped_out_of_place) summary += ' ' + tf('setup.wiz.finish_skipped_place', { n: s.skipped_out_of_place });
     document.getElementById('finish-summary').textContent = summary;
     goStep(6);
   } else if (s.state === 'error') {

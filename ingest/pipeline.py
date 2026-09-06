@@ -85,31 +85,55 @@ def _iter_media_files(folder: Path, exclude_dirs: set[str] | None = None):
 
 def ingest_phase1(folder: Path, enrolled: dict, conn, exclude_dirs: set[str] | None = None,
                   progress_cb=None, date_start: date | None = None,
-                  date_end: date | None = None) -> dict:
+                  date_end: date | None = None, places: list[str] | None = None) -> dict:
     """Stream every file once: decode, tag, score, insert. Corrupt files
     are skipped and logged, ingest continues (Premise 16).
 
     `progress_cb(processed, total, message)` (optional) is called once per file
     so the Setup UI can show an import progress bar.
 
-    When `date_start`/`date_end` are given, a cheap first pass dates every file
-    (EXIF/clip timestamp, no pixel decode) and drops those taken outside the
-    inclusive window BEFORE the expensive decode/tag/score pass - so pointing at
-    a whole camera roll doesn't process months of unrelated photos to keep a
-    trip's worth. Undated files (no reliable capture date) are kept. Returns
-    {imported_photos, imported_clips, skipped_out_of_range, included_undated}."""
-    # Pass 1 (cheap): date + partition. Undated stay in scope (included policy).
-    in_scope: list[tuple[Path, date | None]] = []
+    A cheap first pass bounds WHAT gets the expensive decode/tag/score, so
+    pointing at a whole camera roll doesn't process months of unrelated media to
+    keep a trip's worth. Two independent bounds (used one-at-a-time by the
+    wizard's "find by dates" / "find by place" modes, but composable here):
+
+    - `date_start`/`date_end`: keep files taken inside the inclusive window
+      (EXIF/clip date, no pixel decode). Undated files are kept (included policy).
+    - `places`: keep files whose GPS reverse-geocodes to one of these selected
+      "City, Region" labels (geo.NO_LOCATION selects un-geotagged files). Applied
+      after the date bound.
+
+    Returns {imported_photos, imported_clips, skipped_out_of_range,
+    included_undated, skipped_out_of_place}."""
+    # Pass 1a (cheap): date window. Undated stay in scope (included policy).
+    dated: list[tuple[Path, date | None]] = []
     skipped_out_of_range = 0
     included_undated = 0
     for path in _iter_media_files(folder, exclude_dirs):
         d = media_capture_date(path)
         if in_window(d, date_start, date_end):
-            in_scope.append((path, d))
+            dated.append((path, d))
             if d is None:
                 included_undated += 1
         else:
             skipped_out_of_range += 1
+
+    # Pass 1b (cheap): place filter. One batch reverse-geocode of the survivors'
+    # GPS; keep only files whose place label was selected. Files with no GPS map
+    # to geo.NO_LOCATION and ride along only if "No location" was ticked.
+    skipped_out_of_place = 0
+    if places is not None:
+        from ingest.geo import labels_for_paths
+        selected = set(places)
+        labels = labels_for_paths([p for p, _ in dated])
+        in_scope: list[tuple[Path, date | None]] = []
+        for (path, d), label in zip(dated, labels):
+            if label in selected:
+                in_scope.append((path, d))
+            else:
+                skipped_out_of_place += 1
+    else:
+        in_scope = dated
 
     # Pass 2 (heavy): decode/tag/score/insert only the survivors.
     imported_photos = imported_clips = 0
@@ -152,6 +176,7 @@ def ingest_phase1(folder: Path, enrolled: dict, conn, exclude_dirs: set[str] | N
         "imported_clips": imported_clips,
         "skipped_out_of_range": skipped_out_of_range,
         "included_undated": included_undated,
+        "skipped_out_of_place": skipped_out_of_place,
     }
 
 
@@ -320,6 +345,7 @@ def run_ingest(
     progress_cb=None,
     date_start: date | None = None,
     date_end: date | None = None,
+    places: list[str] | None = None,
 ) -> dict:
     """Fails loudly before any per-file work if the cloud API key is missing
     (Premise 24) - avoids wasting a whole run's worth of place-ID attempts
@@ -340,7 +366,7 @@ def run_ingest(
     try:
         counts = ingest_phase1(
             Path(folder), enrolled, conn, exclude_dirs, progress_cb=progress_cb,
-            date_start=date_start, date_end=date_end,
+            date_start=date_start, date_end=date_end, places=places,
         )
         _stage("Grouping photos into moments…")
         ingest_phase2(conn, gap_threshold_minutes)

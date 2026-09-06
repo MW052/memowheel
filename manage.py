@@ -4,6 +4,8 @@
     python manage.py enroll wife "C:\\path\\to\\reference_photos_folder"
     python manage.py itinerary "C:\\path\\to\\itinerary.txt"
     python manage.py ingest "C:\\path\\to\\trip\\photos" [--exclude folder1,folder2] [--from YYYY-MM-DD] [--to YYYY-MM-DD]
+    python manage.py ingest "C:\\path\\to\\camera_roll" --list-places      (list places found in the folder)
+    python manage.py ingest "C:\\path\\to\\camera_roll" --places "Lisbon, Lisbon;Sintra, Lisbon"
     python manage.py reset-ingest
     python manage.py retry-unresolved
     python manage.py serve
@@ -104,7 +106,7 @@ def cmd_itinerary(path: str) -> None:
 
 
 def cmd_ingest(folder: str, exclude_dirs: set[str] | None = None,
-               date_start=None, date_end=None) -> None:
+               date_start=None, date_end=None, places=None) -> None:
     conn = get_connection(DEFAULT_DB_PATH)
     try:
         enrolled = load_enrolled(conn)
@@ -114,11 +116,27 @@ def cmd_ingest(folder: str, exclude_dirs: set[str] | None = None,
         print("At least one person must be enrolled first (run 'enroll'). Currently enrolled: none")
         sys.exit(1)
     counts = run_ingest(folder, enrolled, exclude_dirs=exclude_dirs,
-                        date_start=date_start, date_end=date_end)
+                        date_start=date_start, date_end=date_end, places=places)
     if counts and (date_start or date_end):
         print(f"Skipped {counts['skipped_out_of_range']} file(s) outside the date range; "
               f"included {counts['included_undated']} undated file(s).")
+    if counts and places:
+        print(f"Skipped {counts['skipped_out_of_place']} file(s) outside the selected place(s).")
     print("Ingest complete. Run 'python manage.py serve' to review.")
+
+
+def cmd_list_places(folder: str, exclude_dirs: set[str] | None = None) -> None:
+    """Print the places found in a folder (from photo GPS tags) so a CLI user can
+    copy exact labels into `ingest --places`. Read-only."""
+    from pathlib import Path
+    from ingest.geo import scan_places
+    result = scan_places(Path(folder), exclude_dirs)
+    for p in result["places"]:
+        print(f"{p['count']:>6}  {p['label']}")
+    if result["no_location"]:
+        print(f"{result['no_location']:>6}  (no location)")
+    if not result["places"] and not result["no_location"]:
+        print("No media found.")
 
 
 def cmd_reset_ingest() -> None:
@@ -221,7 +239,16 @@ if __name__ == "__main__":
         if date_start and date_end and date_start > date_end:
             print("--from is after --to")
             sys.exit(1)
-        cmd_ingest(sys.argv[2], exclude_dirs, date_start, date_end)
+        if "--list-places" in sys.argv:
+            cmd_list_places(sys.argv[2], exclude_dirs)
+        else:
+            # Labels contain commas ("Lisbon, Lisbon"), so places are ';'-separated.
+            # Run `ingest <folder> --list-places` first to see the exact labels.
+            places = None
+            if "--places" in sys.argv:
+                raw = sys.argv[sys.argv.index("--places") + 1]
+                places = [s.strip() for s in raw.split(";") if s.strip()] or None
+            cmd_ingest(sys.argv[2], exclude_dirs, date_start, date_end, places)
     elif command == "reset-ingest":
         cmd_reset_ingest()
     elif command == "retry-unresolved":

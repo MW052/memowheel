@@ -17,3 +17,13 @@ STATUS.md
 build/
 dist/
 dist.zip
+
+# Maintainer-only release runbook (private repo name + process); keep local, never publish
+PUBLISHING.md
+
+# Claude Code project instructions (maintainer-only); keep local, never publish
+CLAUDE.md
+
+# Personal itinerary + internal legal checklist; keep local, never publish
+docs/trip-plan.txt
+docs/pre-public-legal-checklist.md

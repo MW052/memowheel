@@ -7,8 +7,8 @@ runs entirely on your own machine — no accounts, nothing uploaded except the
 few photos you approve for AI place-identification.
 
 The app is a small **hub ("Memowheel")** of "makers"; **Trip Video** is the
-first and only live one. Occasion Video and Face Morph are stubbed as
-coming-soon cards. See `git log --oneline` for the authoritative change log.
+first and only live one. Occasion Video is stubbed as a coming-soon card.
+See `git log --oneline` for the authoritative change log.
 All visual decisions (app **and** video) are
 governed by `DESIGN.md` — read it before any UI/aesthetic change.
 
