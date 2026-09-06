@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ t('consent.title') }}{% endblock %}
+
+{% block content %}
+<p class="kicker">{{ t('consent.kicker') }}</p>
+<h1>{{ t('consent.h1') }}</h1>
+<p class="summary">
+  {{ t('consent.summary', n=(pending | length)) }}
+</p>
+
+<form method="post" action="/consent" id="consent-form">
+  {% for cluster in pending %}
+  <div class="consent-row">
+    <img src="/media/{{ cluster.representative_item_id }}" onerror="this.style.display='none'">
+    <input type="checkbox" name="approved_cluster_ids" value="{{ cluster.cluster_id }}" checked>
+    <input type="hidden" name="all_pending_cluster_ids" value="{{ cluster.cluster_id }}">
+    <span>{{ t('consent.send') }}</span>
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn btn-primary" style="margin-top:16px">{{ t('consent.confirm') }}</button>
+</form>
+{% endblock %}
+
+{% block script %}
+<script>
+document.getElementById("consent-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new URLSearchParams(new FormData(e.target));
+  const res = await fetch("/consent", { method: "POST", body: form });
+  const data = await res.json();
+  const msg = tf("consent.result", { approved: data.approved, excluded: data.excluded });
+  document.body.innerHTML = `<div class="wrap"><p class="summary">${msg} <a href="/review">${t("consent.back")}</a></p></div>`;
+});
+</script>
+{% endblock %}

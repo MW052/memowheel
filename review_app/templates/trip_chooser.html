@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}{{ t('projects.title') }}{% endblock %}
+
+{% block content %}
+<div class="chooser">
+  <p class="kicker">{{ t('feature.trip.name') }}</p>
+  <h1>{{ t('projects.title') }}</h1>
+  <p class="summary">{{ t('projects.sub') }}</p>
+
+  {% if last_unfinished %}
+  <form method="post" action="/projects/{{ last_unfinished.id }}/open" class="continue-card">
+    <div>
+      <div class="cc-label">{{ t('projects.continue') }}</div>
+      <div class="cc-name" dir="auto">{{ last_unfinished.name }}</div>
+      <div class="cc-meta">{{ t('projects.in_progress') }} · {{ t('projects.updated', when=last_unfinished.updated[:10]) }}</div>
+    </div>
+    <button type="submit" class="btn btn-primary btn-lg">{{ t('projects.continue_btn') }} &rarr;</button>
+  </form>
+  {% endif %}
+
+  <div class="proj-section-label">{{ t('projects.your_projects') }}</div>
+  <div class="proj-list">
+    {% for p in projects %}
+    <div class="proj-row {{ 'is-current' if current and current.id == p.id }}" data-id="{{ p.id }}">
+      <div class="proj-info">
+        <div class="proj-name" dir="auto">{{ p.name }}
+          {% if p.video %}<span class="proj-badge done">{{ t('projects.finished') }}</span>
+          {% else %}<span class="proj-badge wip">{{ t('projects.in_progress') }}</span>{% endif %}
+        </div>
+        <div class="proj-meta">{{ t('projects.updated', when=p.updated[:10]) }}</div>
+      </div>
+      <div class="proj-acts">
+        <form method="post" action="/projects/{{ p.id }}/open">
+          <button type="submit" class="btn btn-secondary">{{ t('projects.open') if p.video else t('projects.continue_btn') }}</button>
+        </form>
+        <button class="kebab proj-kebab" onclick="projMenu(event, '{{ p.id }}')" title="{{ t('review.more') }}" aria-label="{{ t('review.more') }}">&#8942;</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if archived %}
+  <div class="proj-section-label">{{ t('projects.archived_label') }}</div>
+  <div class="proj-list">
+    {% for p in archived %}
+    <div class="proj-row is-archived" data-arch="{{ p.id }}">
+      <div class="proj-info">
+        <div class="proj-name" dir="auto">{{ p.name }}
+          <span class="proj-badge archived">{{ t('projects.archived') }}</span>
+        </div>
+        <div class="proj-meta">{{ t('projects.updated', when=p.updated[:10]) }}</div>
+      </div>
+      <div class="proj-acts">
+        <form method="post" action="/projects/restore-archive/{{ p.id }}">
+          <button type="submit" class="btn btn-secondary">{{ t('projects.restore') }}</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post" action="/projects/new" class="new-proj" onsubmit="return newProj(event)">
+    <button type="button" class="add-dashed" onclick="document.getElementById('new-proj-fields').hidden=!document.getElementById('new-proj-fields').hidden;this.nextElementSibling.hidden||document.querySelector('#new-proj-fields input').focus()">
+      <span class="add-plus">+</span> {{ t('projects.new') }}
+    </button>
+    <div id="new-proj-fields" hidden>
+      <div class="row-form">
+        <input type="text" name="name" dir="auto" placeholder="{{ t('projects.new_ph') }}" required>
+        <button type="submit" class="btn btn-primary">{{ t('projects.new_start') }} &rarr;</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+{% endblock %}
+
+{% block script %}
+<script>
+function toast(msg){ const w=document.getElementById('toasts'); const el=document.createElement('div'); el.className='toast'; el.textContent=msg; w.appendChild(el); setTimeout(()=>{el.classList.add('out'); setTimeout(()=>el.remove(),260);}, 3500); }
+function closeMenu(){ const m=document.getElementById('popmenu'); if(m) m.remove(); }
+function showMenu(anchor, items){
+  closeMenu();
+  const menu=document.createElement('div'); menu.className='popmenu'; menu.id='popmenu';
+  items.forEach(it=>{ const b=document.createElement('button'); b.className='popmenu-item'+(it.danger?' danger':''); b.textContent=it.label; b.onclick=()=>{closeMenu(); it.fn();}; menu.appendChild(b); });
+  document.body.appendChild(menu);
+  const r=anchor.getBoundingClientRect();
+  menu.style.top=(r.bottom+4+window.scrollY)+'px';
+  menu.style.left=Math.max(8, r.right-menu.offsetWidth+window.scrollX)+'px';
+  setTimeout(()=>document.addEventListener('click', closeMenu, {once:true}), 0);
+}
+function projMenu(e, id){
+  e.stopPropagation();
+  showMenu(e.currentTarget, [
+    { label: t('projects.rename'), fn: ()=>renameProj(id) },
+    { label: t('projects.delete'), danger:true, fn: ()=>deleteProj(id) },
+  ]);
+}
+async function renameProj(id){
+  const row=document.querySelector(`.proj-row[data-id="${id}"] .proj-name`);
+  const cur=row.firstChild.textContent.trim();
+  const name=prompt(t('projects.rename_prompt'), cur);
+  if(name==null || !name.trim()) return;
+  await fetch(`/projects/${id}/rename`, {method:'POST', body:new URLSearchParams({name})});
+  location.reload();
+}
+async function deleteProj(id){
+  if(!confirm(t('projects.delete_confirm'))) return;
+  await fetch(`/projects/${id}/delete`, {method:'POST'});
+  location.reload();
+}
+function newProj(e){ return true; } // native submit
+</script>
+{% endblock %}

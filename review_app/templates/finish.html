@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ t('finish.title') }}{% endblock %}
+
+{% block content %}
+<div class="pf-page">
+  <span class="done-kicker">{{ t('review.done') }}</span>
+  <h1 class="pf-h1">&#127916; {{ t('finish.title') }}</h1>
+
+  {% if latest %}
+  <video class="pf-player" id="pf-video" controls preload="metadata" src="/output/{{ latest | urlencode }}"></video>
+  <p class="pf-stats" id="pf-stats"></p>
+  <div class="pf-actions">
+    <a class="btn btn-primary btn-lg" href="/output/{{ latest | urlencode }}" download="{{ latest }}">&#11015; {{ t('review.download') }}</a>
+    <a class="btn btn-secondary" href="/preview">{{ t('finish.rebuild') }}</a>
+    <a class="btn btn-secondary" href="/review">&larr; {{ t('preview.back_story') }}</a>
+  </div>
+  <p class="share-hint">{{ t('finish.saved_to', dir=output_dir) }}</p>
+  {% else %}
+  <div class="pf-empty">{{ t('finish.none') }} <a href="/preview">{{ t('finish.go_preview') }}</a></div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+const _v = document.getElementById('pf-video');
+if (_v) _v.addEventListener('loadedmetadata', () => {
+  const dur = _v.duration || 0, mm = Math.floor(dur / 60), ss = String(Math.round(dur % 60)).padStart(2, '0');
+  document.getElementById('pf-stats').textContent = tf('review.finish_stats', { items: {{ included_count }}, time: mm + ':' + ss });
+}, { once: true });
+</script>
+{% endblock %}

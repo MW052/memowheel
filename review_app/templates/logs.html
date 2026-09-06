@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ t('logs.title') }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="log-page">
+  <div class="log-head">
+    <h1>{{ t('logs.title') }}</h1>
+    <div class="log-actions">
+      <button type="button" class="btn btn-secondary" onclick="refreshLog()">{{ t('logs.refresh') }}</button>
+      <a class="btn btn-secondary" href="/logs/raw" download="tripvideo.log">{{ t('logs.download') }}</a>
+      <label class="log-follow"><input type="checkbox" id="log-follow" checked onchange="toggleFollow()"> {{ t('logs.follow') }}</label>
+    </div>
+  </div>
+  <p class="log-path" dir="ltr">{{ log_path }}</p>
+  <pre class="log-body" id="log-body" dir="ltr">{{ log_text if log_text else t('logs.empty') }}</pre>
+</div>
+
+<script>
+const logBody = document.getElementById('log-body');
+let following = true;
+function scrollLogToEnd() { if (following) logBody.scrollTop = logBody.scrollHeight; }
+function toggleFollow() { following = document.getElementById('log-follow').checked; scrollLogToEnd(); }
+async function refreshLog() {
+  try {
+    const text = await (await fetch('/logs/raw', { cache: 'no-store' })).text();
+    logBody.textContent = text;
+    scrollLogToEnd();
+  } catch (_) { /* leave the current text on a transient failure */ }
+}
+scrollLogToEnd();
+// Live-tail while the page is open (paused when the tab is hidden).
+setInterval(() => { if (!document.hidden) refreshLog(); }, 4000);
+</script>
+{% endblock %}

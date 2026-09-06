@@ -1,0 +1,129 @@
+{# One "moment" (cluster): a collapsible card. Collapsed = overview (cover +
+   place + counts); expanded = the photo editor (included grid + a tray of
+   not-used items). Rendered inline by review.html and standalone by
+   GET /review/clusters/{id}/fragment. Needs: entry {cluster, media_items},
+   enrolled_people, t. #}
+
+{% set items = entry.media_items %}
+{% set cover = (items | selectattr('is_representative') | list | first) or (items | first) %}
+{% set included = items | selectattr('include_in_video') | list %}
+{% set excluded = items | rejectattr('include_in_video') | list %}
+{% set photo_count = included | selectattr('item_type', 'equalto', 'photo') | list | length %}
+{% set clip_count = included | selectattr('item_type', 'equalto', 'clip') | list | length %}
+{% set cid = entry.cluster.id %}
+
+{% macro card(item) %}
+<div class="item card {% if not item.include_in_video %}excluded{% endif %}" data-item-id="{{ item.id }}">
+  <div class="drag-handle" draggable="true" title="{{ t('review.drag_hint') }}">
+    <span class="dh-grip" aria-hidden="true">⠿</span>
+    <span class="dh-label">{{ t('review.drag_hint') }}</span>
+  </div>
+  <div class="card-media">
+    {% if item.item_type == 'photo' %}
+    <img src="/media/{{ item.id }}{% if item.rotation or item.crop %}?v={{ item.rotation }}_{{ item.crop|replace(',','')|replace('.','') if item.crop else '' }}{% endif %}" loading="lazy" onclick='openLightbox({{ item.id }}, "photo", {rotation: {{ item.rotation or 0 }}, crop: {{ item.crop | tojson }}})'>
+    {% else %}
+    <video src="/media/{{ item.id }}" muted onclick="openLightbox({{ item.id }}, 'clip', {start: {{ item.clip_start or 0 }}, end: {{ item.clip_end or 0 }}})"></video>
+    {% endif %}
+    {% if item.is_representative %}<span class="cover-badge" title="{{ t('review.best') }}">★</span>{% endif %}
+    <label class="card-select" title="{{ t('review.select') }}" onclick="event.stopPropagation()">
+      <input type="checkbox" onchange="toggleSelect(event, {{ item.id }})">
+    </label>
+    <div class="card-tools">
+      <button onclick="toggleItem({{ item.id }})">{{ t('review.leave_out') if item.include_in_video else t('review.include') }}</button>
+      {% if item.item_type == 'photo' and item.include_in_video and not item.is_representative %}
+      <button onclick="setCover({{ cid }}, {{ item.id }})" title="{{ t('review.make_cover') }}">★</button>
+      {% endif %}
+      {% if enrolled_people %}
+      <button onclick='openFaces({{ item.id }}, {{ item.face_tags | tojson }})'>{{ t('review.people') }}</button>
+      {% endif %}
+      {% if item.item_type == 'photo' and item.include_in_video %}
+      <button type="button" onclick="toggleCardPlace(this)" title="{{ t('review.diff_place') }}">{{ t('review.place_btn') }}</button>
+      {% endif %}
+    </div>
+  </div>
+  {% if item.face_tags %}<div class="card-tags" dir="auto">{{ item.face_tags | join(', ') }}</div>{% endif %}
+  {% if item.place_name %}<div class="card-place" dir="auto">📍 {{ item.place_name }}</div>{% endif %}
+  {% if item.item_type == 'photo' and item.include_in_video %}
+  <div class="card-place-edit" {% if not item.place_name %}hidden{% endif %}>
+    <form class="item-place-form" onsubmit="return saveItemPlace(event, {{ item.id }})">
+      <input type="text" name="place_name" dir="auto" value="{{ item.place_name or '' }}"
+             placeholder="{{ t('review.place_on_photo') }}" onchange="saveItemPlace(event, {{ item.id }})">
+    </form>
+    <button onclick="sendForId({{ item.id }})">{{ t('review.find_place') }}</button>
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+<div class="moment" data-cluster-id="{{ cid }}">
+  <button type="button" class="moment-head" onclick="toggleMoment('{{ cid }}')" aria-expanded="false">
+    <span class="moment-cover">
+      {% if cover and cover.item_type == 'photo' %}
+      <img src="/media/{{ cover.id }}{% if cover.rotation or cover.crop %}?v={{ cover.rotation }}_{{ cover.crop|replace(',','')|replace('.','') if cover.crop else '' }}{% endif %}" loading="lazy" alt="">
+      {% elif cover %}
+      <video src="/media/{{ cover.id }}" muted></video>
+      {% endif %}
+    </span>
+    <span class="moment-info">
+      <span class="moment-place" dir="auto">
+        {% if entry.cluster.place_name %}{{ entry.cluster.place_name }}{% else %}<span class="badge-warn">{{ t('review.needs_place') }}</span>{% endif %}
+      </span>
+      <span class="moment-counts">
+        {{ t('review.moment_photos', n=photo_count) }}{% if clip_count %} · {{ t('review.moment_clips', n=clip_count) }}{% endif %}{% if excluded %} · <span class="muted-count">{{ t('review.not_used', n=excluded|length) }}</span>{% endif %}
+      </span>
+    </span>
+    <span class="moment-chev" aria-hidden="true">▸</span>
+  </button>
+
+  <div class="moment-body" hidden>
+    <form class="manual-place-form row-form" data-cluster-id="{{ cid }}">
+      <label class="place-label">{{ t('review.moment_place_label') }}</label>
+      <input type="text" name="place_name" dir="auto" value="{{ entry.cluster.place_name or '' }}"
+             placeholder="{{ t('review.place_ph') }}">
+      <button type="submit" class="btn btn-secondary">{{ t('review.save_place') }}</button>
+    </form>
+
+    <div class="grid" data-cluster="{{ cid }}">
+      {% for item in included %}{{ card(item) }}{% endfor %}
+    </div>
+
+    {% if excluded %}
+    <details class="excluded-tray">
+      <summary>{{ t('review.tray_label', n=excluded|length) }}</summary>
+      <div class="grid excluded-grid" data-cluster="{{ cid }}">
+        {% for item in excluded %}{{ card(item) }}{% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {# Action row sits below the last item/row: two icon buttons whose
+       explanatory text is a tooltip (title). Add-media is first; the soundtrack
+       button opens a chooser menu of tracks. #}
+    <div class="moment-actions">
+      <button type="button" class="btn btn-secondary moment-action" title="{{ t('review.add_media_hint') }}"
+              onclick="openMediaPicker('{{ cid }}')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+        {{ t('review.add_media_label') }}
+      </button>
+
+      {% if music_tracks %}
+      <div class="moment-soundtrack">
+        <button type="button" class="btn btn-secondary moment-action {% if entry.cluster.music_track %}has-track{% endif %}"
+                title="{{ t('review.music_hint') }}" aria-haspopup="true" aria-expanded="false"
+                onclick="toggleSoundtrackMenu(event, this)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>
+          {{ t('review.music_from_here') }}
+        </button>
+        <div class="soundtrack-menu" role="menu" hidden>
+          <button type="button" role="menuitemradio" class="st-opt {% if not entry.cluster.music_track %}on{% endif %}"
+                  onclick='chooseSoundtrack(event, "{{ cid }}", "")'>{{ t('review.music_continue') }}</button>
+          {% for name in music_tracks %}
+          <button type="button" role="menuitemradio" dir="auto" class="st-opt {% if entry.cluster.music_track == name %}on{% endif %}"
+                  onclick='chooseSoundtrack(event, "{{ cid }}", {{ name | tojson }})'>{{ name }}</button>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

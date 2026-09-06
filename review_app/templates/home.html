@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }}{% endblock %}
+
+{% block content %}
+<p class="kicker">{{ t('app.tagline') }}</p>
+<h1>{{ app_name }}</h1>
+<p class="summary">{{ t('home.q') }}</p>
+
+<div class="feature-grid">
+  {% for f in features %}
+  {% if f.status == 'available' %}
+  <a class="feature-card" href="{{ f.url }}">
+    <span class="feature-emoji">{{ f.emoji }}</span>
+    <span class="feature-name">{{ t('feature.' ~ f.key ~ '.name', default=f.name) }}</span>
+    <span class="feature-desc">{{ t('feature.' ~ f.key ~ '.desc', default=f.desc) }}</span>
+  </a>
+  {% else %}
+  <div class="feature-card soon" title="{{ t('home.soon_title') }}">
+    <span class="feature-emoji">{{ f.emoji }}</span>
+    <span class="feature-name">{{ t('feature.' ~ f.key ~ '.name', default=f.name) }} <span class="soon-badge">{{ t('home.soon') }}</span></span>
+    <span class="feature-desc">{{ t('feature.' ~ f.key ~ '.desc', default=f.desc) }}</span>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}

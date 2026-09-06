@@ -1,0 +1,805 @@
+{% extends "base.html" %}
+{% block title %}{{ t('review.title') }}{% endblock %}
+
+{% macro tile(m) %}
+<div class="moment-tile" data-cluster-id="{{ m.id }}" role="button" tabindex="0"
+     onclick="openMoment('{{ m.id }}')" onkeydown="if(event.key==='Enter')openMoment('{{ m.id }}')">
+  {% if m.cover and m.cover.type == 'photo' %}
+  <img class="mt-cover" loading="lazy" alt=""
+       src="/media/{{ m.cover.id }}{% if m.cover.rotation or m.cover.crop %}?v={{ m.cover.rotation }}_{{ m.cover.crop|replace(',','')|replace('.','') if m.cover.crop else '' }}{% endif %}">
+  {% elif m.cover %}
+  <video class="mt-cover" src="/media/{{ m.cover.id }}" muted></video>
+  {% else %}
+  <div class="mt-cover mt-empty"></div>
+  {% endif %}
+  <div class="mt-body">
+    <div class="mt-title">
+      <span class="mt-name" dir="auto">{% if m.title %}{{ m.title }}{% endif %}</span>
+      <span class="spacer"></span>
+      <button class="kebab" onclick="momentMenu(event, '{{ m.id }}')" title="{{ t('review.more') }}">&#8942;</button>
+    </div>
+    <div class="mt-meta">{{ t('review.items_n', n=m.count) }} &middot; {{ m.duration }} &middot; <span class="mt-id">#{{ m.id }}</span></div>
+    {% if m.included == 0 %}<div class="mt-notincluded">{{ t('review.not_included') }}</div>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<aside class="ws-sidebar">
+  <div class="ov-label">{{ t('review.overview') }}</div>
+  <a class="ov-row {{ 'on' if view == 'all' }}" href="/review?view=all"><span>{{ t('review.all_moments') }}</span><b>{{ overview.all_moments }}</b></a>
+  <a class="ov-row {{ 'on' if view == 'needs' }}" href="/review?view=needs"><span>{{ t('review.needs_attention') }}</span><b class="{{ 'attn' if overview.needs_attention }}">{{ overview.needs_attention }}</b></a>
+  <a class="ov-row {{ 'on' if view == 'unassigned' }}" href="/review?view=unassigned"><span>{{ t('review.nav_unassigned') }}</span><b>{{ overview.unassigned }}</b></a>
+
+  <div class="ov-label">{{ t('review.days_label') }}</div>
+  <div class="day-list">
+    {% for d in days %}
+    <a class="day-row {{ 'on' if (sel_day and sel_day.trip_day == d.trip_day and not view) }}" href="/review?day={{ d.trip_day }}">
+      <span class="dr-name">{{ t('review.day', n=d.index) }}</span>
+      <span class="dr-date">{{ d.short }}</span>
+      <span class="dr-count">{{ d.count }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  <button class="add-day-link" onclick="addDay()">+ {{ t('review.add_day') }}</button>
+
+  <details class="trip-settings">
+    <summary>{{ t('review.trip_settings') }}</summary>
+    <form id="intro-form" class="ts-form">
+      <label for="intro-text">{{ t('review.opening') }}</label>
+      <textarea id="intro-text" name="intro_text" dir="auto" rows="2">{{ intro_text }}</textarea>
+      <button type="submit" class="btn btn-secondary">{{ t('review.save_opening') }}</button>
+    </form>
+    <form id="outro-form" class="ts-form">
+      <label for="outro-text">{{ t('review.closing') }}</label>
+      <textarea id="outro-text" name="outro_text" dir="auto" rows="2">{{ outro_text }}</textarea>
+      <button type="submit" class="btn btn-secondary">{{ t('review.save_closing') }}</button>
+    </form>
+    <form id="recluster-form" class="ts-form">
+      <label>{{ t('review.group_within') }} {{ t('review.minutes') }}</label>
+      <div class="row-form">
+        <input type="number" name="gap_threshold_minutes" value="{{ current_gap_threshold }}" step="1" min="1" style="max-width:90px">
+        <button type="submit" class="btn btn-secondary">{{ t('review.regroup') }}</button>
+      </div>
+    </form>
+  </details>
+</aside>
+
+<section class="ws-content">
+  <div id="overview-pane">
+    {% if not days and not overview.unassigned %}
+    <div class="ws-empty">
+      <strong>{{ t('review.no_trip') }}</strong> {{ t('review.no_trip_go') }}
+      <div style="margin-top:14px"><a class="btn btn-primary" href="/setup">{{ t('nav.setup') }} &rarr;</a></div>
+    </div>
+
+    {% elif view == 'unassigned' %}
+    <h2 class="ws-h2">{{ t('review.unassigned') }}</h2>
+    <p class="hint">{{ t('review.unassigned_hint') }}</p>
+    <div class="cluster" id="orphan-cluster">
+      <div class="grid" data-cluster="">
+        {% for item in orphan_items %}
+        <div class="item {% if not item.include_in_video %}excluded{% endif %}" data-item-id="{{ item.id }}">
+          <div class="drag-handle" draggable="true" title="{{ t('review.drag_hint') }}">
+            <span class="dh-grip" aria-hidden="true">&#10287;</span>
+            <span class="dh-label">{{ t('review.drag_hint') }}</span>
+          </div>
+          {% if item.item_type == 'photo' %}<img src="/media/{{ item.id }}" loading="lazy">{% else %}<video src="/media/{{ item.id }}" muted></video>{% endif %}
+          <div class="tags">{{ item.face_tags | join(', ') if item.face_tags else t('review.no_face') }}</div>
+          <select class="assign-select" onchange="assignToCluster({{ item.id }}, this.value)">
+            <option value="">{{ t('review.assign_to') }}</option>
+            {% for ch in cluster_choices %}<option value="{{ ch.id }}">{{ ch.label }}</option>{% endfor %}
+          </select>
+          <button onclick="toggleItem({{ item.id }})">{{ t('review.leave_out') if item.include_in_video else t('review.include') }}</button>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% elif view == 'all' %}
+    {% for sec in day_sections %}
+    <div class="day-block">
+      <h2 class="ws-h2">{{ t('review.day', n=sec.day.index) }} <span class="dh-date">{{ sec.day.long }}</span></h2>
+      {% if sec.day.caption %}<div class="dh-sub">{{ sec.day.caption }}</div>{% endif %}
+      <div class="tiles">{% for m in sec.tiles %}{{ tile(m) }}{% endfor %}</div>
+    </div>
+    {% endfor %}
+
+    {% elif view == 'needs' %}
+    <h2 class="ws-h2">{{ t('review.needs_attention') }}</h2>
+    <p class="hint">{{ t('review.needs_hint') }}</p>
+    <div class="tiles">{% for m in tiles %}{{ tile(m) }}{% endfor %}</div>
+
+    {% elif sel_day %}
+    <div class="day-header">
+      <div class="dh-left">
+        <h2 class="ws-h2">{{ t('review.day', n=sel_day.index) }} <span class="dh-dot">&middot;</span> <span class="dh-date">{{ sel_day.long }}</span></h2>
+        <div class="dh-sub {{ 'placeholder' if not sel_day.caption }}" id="day-caption-text" data-day="{{ sel_day.trip_day }}">{{ sel_day.caption or t('review.no_day_title') }}</div>
+      </div>
+      <div class="dh-actions">
+        <button class="btn btn-secondary" onclick="editDayTitle('{{ sel_day.trip_day }}')">{{ t('review.edit_day_title') }}</button>
+        <button class="kebab" onclick="dayMenu(event, '{{ sel_day.trip_day }}')" title="{{ t('review.more') }}">&#8942;</button>
+      </div>
+    </div>
+    <div class="tiles">{% for m in tiles %}{{ tile(m) }}{% endfor %}</div>
+    <button class="add-dashed" onclick="addMoment('{{ sel_day.trip_day }}')">+ {{ t('review.add_moment') }}</button>
+    {% endif %}
+  </div>
+
+  <div id="moment-pane" hidden>
+    <button class="back-link" onclick="backToDay()">&#8592; {{ t('review.back_to_day') }}</button>
+    <div id="moment-host"></div>
+  </div>
+</section>
+
+<button class="preview-fab" onclick="generate()" {% if included_count == 0 %}disabled{% endif %}>
+  <span class="pf-ico">&#9654;</span> {{ t('review.preview_draft') }}
+</button>
+
+<!-- generate + finish overlay (Preview Draft) -->
+<div id="gen-overlay" class="gen-overlay" hidden onclick="if(event.target===this)closeGen()">
+  <div class="gen-card">
+    <button class="gen-close" onclick="closeGen()" aria-label="{{ t('review.close') }}">&times;</button>
+    <div id="gen-progress-wrap">
+      <p class="gen-title">{{ t('review.making_film') }}</p>
+      <ol class="phases" id="gen-phases">
+        <li data-phase="prep"><span class="ph-mark"></span>{{ t('review.gen_prep') }}</li>
+        <li data-phase="titles"><span class="ph-mark"></span>{{ t('review.gen_titles') }}</li>
+        <li data-phase="audio"><span class="ph-mark"></span>{{ t('review.gen_audio') }}</li>
+        <li data-phase="encode"><span class="ph-mark"></span>{{ t('review.gen_encode') }}</li>
+      </ol>
+      <div class="progress"><div class="progress-bar" id="gen-bar"></div></div>
+      <div id="generate-status" class="quality" style="margin-top:6px"></div>
+    </div>
+    <div id="finish-panel" class="finish" hidden>
+      <span class="done-kicker">{{ t('review.done') }}</span>
+      <h3>&#127916; {{ t('review.film_ready') }}</h3>
+      <video id="finish-video" class="finish-player" controls preload="metadata"></video>
+      <p class="finish-stats" id="finish-stats"></p>
+      <div class="finish-actions">
+        <a id="finish-download" class="btn btn-primary" download>&#11015; {{ t('review.download') }}</a>
+        <button class="btn btn-secondary" onclick="location.reload()">{{ t('review.make_another') }}</button>
+      </div>
+      <p class="share-hint">{{ t('review.saved_note') }}</p>
+    </div>
+  </div>
+</div>
+
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+  <div class="lightbox-inner" id="lightbox-inner" onclick="event.stopPropagation()"></div>
+  <button class="lightbox-close" onclick="closeLightbox()" title="{{ t('review.close_esc') }}">&times;</button>
+</div>
+
+<div id="media-picker" class="picker" style="display:none" onclick="closeMediaPicker()">
+  <div class="picker-box media-picker-box" onclick="event.stopPropagation()">
+    <div class="mp-head">
+      <button type="button" class="btn btn-secondary mp-up" id="mp-up" onclick="mediaPickerUp()">↑ {{ t('review.up') }}</button>
+      <div class="picker-path" id="mp-path"></div>
+    </div>
+    <div class="mp-files" id="mp-files"></div>
+    <div class="picker-actions">
+      <span class="mp-count" id="mp-count"></span>
+      <button class="btn btn-secondary" onclick="closeMediaPicker()">{{ t('review.close') }}</button>
+      <button class="btn btn-primary" id="mp-add" onclick="addSelectedMedia()" disabled>{{ t('review.add_selected') }}</button>
+    </div>
+  </div>
+</div>
+
+<div id="faces-dialog" class="modal" onclick="closeFaces()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <h3>{{ t('review.people_title') }}</h3>
+    <div id="faces-list"></div>
+    <button class="btn btn-secondary" style="margin-top:14px" onclick="closeFaces()">{{ t('review.close') }}</button>
+  </div>
+</div>
+
+<div id="bulk-bar" class="bulk-bar" hidden>
+  <span class="bulk-count"><b id="bulk-n">0</b> {{ t('review.selected') }}</span>
+  <button class="btn btn-secondary" onclick="bulkInclude(1)">{{ t('review.include') }}</button>
+  <button class="btn btn-secondary" onclick="bulkInclude(0)">{{ t('review.leave_out') }}</button>
+  <select id="bulk-move" class="bulk-select" onchange="bulkMove(this)"><option value="">{{ t('review.bulk_move') }}</option></select>
+  {% if enrolled_people %}<select id="bulk-person" class="bulk-select" onchange="bulkFaces(this)"><option value="">{{ t('review.bulk_add_person') }}</option></select>{% endif %}
+  <span class="bulk-place"><input id="bulk-place-input" type="text" dir="auto" placeholder="{{ t('review.bulk_place_ph') }}"><button class="btn btn-secondary" onclick="bulkPlace()">{{ t('review.bulk_set_place') }}</button></span>
+  <button class="btn btn-ghost bulk-clear" onclick="clearSelection()">{{ t('review.bulk_clear') }}</button>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+{% endblock %}
+
+{% block script %}
+<script>
+const ENROLLED = {{ enrolled_people | tojson }};
+const CLUSTER_CHOICES = {{ cluster_choices | tojson }};
+
+// ---------- helpers ----------
+function cardOf(id) { return document.querySelector(`.item[data-item-id="${id}"]`); }
+function clusterIdOf(id) { const m = cardOf(id)?.closest(".moment"); return m ? m.dataset.clusterId : undefined; }
+function stub() { toast(t("nav.soon")); }
+
+// ---------- popup menus (kebab) + Add Day / Add Moment / delete ----------
+function closeMenu() { const m = document.getElementById("popmenu"); if (m) m.remove(); }
+function showMenu(anchor, items) {
+  closeMenu();
+  const menu = document.createElement("div"); menu.className = "popmenu"; menu.id = "popmenu";
+  items.forEach((it) => {
+    const b = document.createElement("button"); b.className = "popmenu-item" + (it.danger ? " danger" : "");
+    b.textContent = it.label;
+    // stopPropagation so opening a nested menu (Merge with…) isn't instantly
+    // closed by this menu's own outside-click handler as the click bubbles up.
+    b.onclick = (ev) => { ev.stopPropagation(); closeMenu(); it.fn(); };
+    menu.appendChild(b);
+  });
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = (r.bottom + 4 + window.scrollY) + "px";
+  menu.style.left = Math.max(8, r.right - menu.offsetWidth + window.scrollX) + "px";
+  setTimeout(() => document.addEventListener("click", closeMenu, { once: true }), 0);
+}
+function momentMenu(e, cid) {
+  e.stopPropagation();
+  const tile = e.currentTarget.closest(".moment-tile");
+  showMenu(e.currentTarget, [
+    { label: t("review.menu_open"), fn: () => openMoment(cid) },
+    { label: t("review.menu_merge"), fn: () => mergeMenu(tile, cid) },
+    { label: t("review.menu_delete_moment"), danger: true, fn: () => deleteMoment(cid) },
+  ]);
+}
+// "Merge with…": pick another moment (from the same day's tiles) to merge into.
+function mergeMenu(tile, cid) {
+  const container = tile.closest(".tiles");
+  const targets = [...container.querySelectorAll(".moment-tile")]
+    .filter((t) => t.dataset.clusterId !== String(cid))
+    .map((t) => ({ id: t.dataset.clusterId, name: (t.querySelector(".mt-name")?.textContent.trim() || ("#" + t.dataset.clusterId)) }));
+  if (!targets.length) { toast(t("review.merge_none")); return; }
+  showMenu(tile.querySelector(".kebab"), targets.map((tg) => ({
+    label: tf("review.merge_into", { name: tg.name }) + "  #" + tg.id, fn: () => mergeMoment(cid, tg.id),
+  })));
+}
+async function mergeMoment(source, target) {
+  await fetch(`/clusters/${source}/merge`, { method: "POST", body: new URLSearchParams({ target_id: target }) });
+  location.reload();
+}
+function dayMenu(e, td) {
+  e.stopPropagation();
+  showMenu(e.currentTarget, [
+    { label: t("review.menu_add_moment"), fn: () => addMoment(td) },
+    { label: t("review.menu_delete_day"), danger: true, fn: () => deleteDay(td) },
+  ]);
+}
+async function addMoment(td) {
+  await fetch("/clusters/add", { method: "POST", body: new URLSearchParams({ trip_day: td }) });
+  location.href = "/review?day=" + encodeURIComponent(td);
+}
+async function addDay() {
+  const d = await (await fetch("/days/add", { method: "POST" })).json();
+  location.href = "/review?day=" + encodeURIComponent(d.trip_day);
+}
+async function deleteMoment(cid) {
+  if (!confirm(t("review.confirm_delete_moment"))) return;
+  await fetch(`/clusters/${cid}/delete`, { method: "POST" });
+  backToDay(); location.reload();
+}
+async function deleteDay(td) {
+  if (!confirm(t("review.confirm_delete_day"))) return;
+  await fetch(`/days/${encodeURIComponent(td)}/delete`, { method: "POST" });
+  location.href = "/review";
+}
+function recountIncluded() {
+  const gen = document.querySelector(".preview-fab");
+  if (gen) gen.disabled = document.querySelectorAll(".moment .item:not(.excluded)").length === 0 && document.querySelectorAll(".item:not(.excluded)").length === 0;
+}
+
+// ---------- moment drill-in (Story) ----------
+const expandedMoments = new Set();
+function applyExpansion(clusterId, open) {
+  const id = String(clusterId);
+  const m = document.querySelector(`.moment[data-cluster-id="${id}"]`);
+  if (!m) return;
+  m.classList.toggle("open", open);
+  const body = m.querySelector(".moment-body"); if (body) body.hidden = !open;
+  const head = m.querySelector(".moment-head"); if (head) head.setAttribute("aria-expanded", open ? "true" : "false");
+  if (open) expandedMoments.add(id); else expandedMoments.delete(id);
+}
+function toggleMoment(clusterId) { applyExpansion(clusterId, !expandedMoments.has(String(clusterId))); }
+function toggleCardPlace(btn) {
+  const edit = btn.closest(".item").querySelector(".card-place-edit");
+  if (!edit) return;
+  edit.hidden = !edit.hidden;
+  if (!edit.hidden) { const i = edit.querySelector("input"); if (i) i.focus(); }
+}
+async function openMoment(id) {
+  const res = await fetch(`/review/clusters/${id}/fragment`);
+  if (!res.ok) return;
+  document.getElementById("moment-host").innerHTML = await res.text();
+  expandedMoments.add(String(id)); applyExpansion(id, true);
+  document.getElementById("overview-pane").hidden = true;
+  document.getElementById("moment-pane").hidden = false;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function backToDay() {
+  document.getElementById("moment-host").innerHTML = "";
+  document.getElementById("moment-pane").hidden = true;
+  document.getElementById("overview-pane").hidden = false;
+  clearSelection();
+}
+async function refreshCluster(clusterId) {
+  if (!clusterId) return;
+  const node = document.querySelector(`.moment[data-cluster-id="${clusterId}"]`);
+  if (!node) return;
+  const res = await fetch(`/review/clusters/${clusterId}/fragment`);
+  if (res.status === 404) { backToDay(); return; }
+  node.outerHTML = await res.text();
+  if (expandedMoments.has(String(clusterId))) applyExpansion(clusterId, true);
+  applySelection();
+}
+async function saveMomentMusic(cid, value) {
+  const res = await fetch(`/clusters/${cid}/music`, { method: "POST", body: new URLSearchParams({ track: value }) });
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok) { toast(tf("review.js.failed", { detail: d.detail || res.status })); return; }
+  toast(value ? tf("review.js.music_set", { track: value }) : t("review.js.music_cleared"));
+}
+// Soundtrack chooser: the "Soundtrack from here" button opens a small menu of
+// tracks (replaces the old inline <select>). Click a track to set it.
+function toggleSoundtrackMenu(e, btn) {
+  e.stopPropagation();
+  const menu = btn.parentElement.querySelector(".soundtrack-menu");
+  const willOpen = menu.hidden;
+  closeSoundtrackMenus();
+  if (!willOpen) return;
+  menu.hidden = false;
+  btn.setAttribute("aria-expanded", "true");
+  // Position as a fixed popover anchored to the button (the .moment card is
+  // overflow:hidden, so an absolute menu would be clipped). Clamp to viewport.
+  const r = btn.getBoundingClientRect();
+  const rtl = getComputedStyle(document.documentElement).direction === "rtl";
+  const mw = menu.offsetWidth || 220;
+  let left = rtl ? r.right - mw : r.left;
+  left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+  let top = r.bottom + 6;
+  const mh = menu.offsetHeight || 0;
+  if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - 6 - mh); // flip up if no room below
+  menu.style.left = left + "px";
+  menu.style.top = top + "px";
+  menu.style.right = "auto";
+}
+function chooseSoundtrack(e, cid, value) {
+  e.stopPropagation();
+  const opt = e.target.closest(".st-opt");
+  const menu = opt.closest(".soundtrack-menu");
+  menu.querySelectorAll(".st-opt").forEach((o) => o.classList.remove("on"));
+  opt.classList.add("on");
+  const btn = menu.parentElement.querySelector(".moment-action");
+  if (btn) btn.classList.toggle("has-track", !!value);
+  closeSoundtrackMenus();
+  saveMomentMusic(cid, value);
+}
+function closeSoundtrackMenus() {
+  document.querySelectorAll(".soundtrack-menu:not([hidden])").forEach((m) => { m.hidden = true; });
+  document.querySelectorAll('.moment-action[aria-expanded="true"]').forEach((b) => b.setAttribute("aria-expanded", "false"));
+}
+document.addEventListener("click", closeSoundtrackMenus);
+window.addEventListener("scroll", closeSoundtrackMenus, true);
+// ---------- add media: file-explorer picker ----------
+let mpCid = null, mpSelected = new Map(), mpParent = null;
+function openMediaPicker(cid) {
+  mpCid = cid; mpSelected = new Map();
+  document.getElementById("media-picker").style.display = "flex";
+  loadMediaDir("");
+}
+function closeMediaPicker() { document.getElementById("media-picker").style.display = "none"; }
+function mediaPickerUp() { if (mpParent) loadMediaDir(mpParent); }
+async function loadMediaDir(path) {
+  let d;
+  try {
+    d = await (await fetch("/browse-media?path=" + encodeURIComponent(path || ""))).json();
+  } catch (err) { toast(tf("review.js.failed", { detail: String(err) })); return; }
+  mpParent = d.parent;
+  document.getElementById("mp-path").textContent = d.path;
+  document.getElementById("mp-up").disabled = !d.parent;  // greyed out at the drive root
+  const files = document.getElementById("mp-files"); files.innerHTML = "";
+  // One scrollable grid: folders first (click to open), then the photos and
+  // clips in this folder (click to select). Going up is the header button.
+  d.dirs.forEach((dir) => files.appendChild(folderTile(dir.name, dir.path)));
+  if (!d.dirs.length && !d.files.length) {
+    const p = document.createElement("p"); p.className = "mp-empty";
+    p.textContent = t("review.mp_no_media"); files.appendChild(p);
+  }
+  d.files.forEach((f) => files.appendChild(mediaTile(f)));
+  files.scrollTop = 0;
+  updateMpCount();
+}
+function folderTile(name, path) {
+  const el = document.createElement("div");
+  el.className = "mp-tile mp-folder"; el.title = name;
+  const ic = document.createElement("span"); ic.className = "mp-folder-ic"; ic.textContent = "📁";
+  const label = document.createElement("span"); label.className = "mp-name"; label.dir = "auto"; label.textContent = name;
+  el.appendChild(ic); el.appendChild(label);
+  el.onclick = () => loadMediaDir(path);
+  return el;
+}
+function mediaTile(f) {
+  const el = document.createElement("div");
+  el.className = "mp-tile" + (mpSelected.has(f.path) ? " sel" : "");
+  if (f.type === "photo") {
+    const img = document.createElement("img"); img.loading = "lazy";
+    img.src = "/setup/thumb?path=" + encodeURIComponent(f.path); el.appendChild(img);
+  } else {
+    const ic = document.createElement("span"); ic.className = "mp-clip"; ic.textContent = "🎞"; el.appendChild(ic);
+  }
+  const name = document.createElement("span"); name.className = "mp-name"; name.dir = "auto"; name.textContent = f.name;
+  el.appendChild(name);
+  const check = document.createElement("span"); check.className = "mp-check"; check.textContent = "✓"; el.appendChild(check);
+  el.onclick = () => {
+    if (mpSelected.has(f.path)) { mpSelected.delete(f.path); el.classList.remove("sel"); }
+    else { mpSelected.set(f.path, true); el.classList.add("sel"); }
+    updateMpCount();
+  };
+  return el;
+}
+function updateMpCount() {
+  const n = mpSelected.size;
+  document.getElementById("mp-count").textContent = n ? tf("review.mp_selected", { n }) : "";
+  document.getElementById("mp-add").disabled = !n;
+}
+async function addSelectedMedia() {
+  if (!mpSelected.size) return;
+  const btn = document.getElementById("mp-add");
+  btn.disabled = true; const prev = btn.textContent; btn.textContent = t("review.add_media_busy");
+  const body = new URLSearchParams();
+  mpSelected.forEach((_, p) => body.append("paths", p));
+  const cid = mpCid;
+  try {
+    const res = await fetch(`/clusters/${cid}/add-files`, { method: "POST", body });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { toast(tf("review.js.failed", { detail: d.detail || res.status })); return; }
+    const n = (d.added || []).length, dup = (d.duplicates || []).length, skip = (d.skipped || []).length;
+    if (n) toast(tf("review.js.added_n", { n }));
+    else if (dup) toast(t("review.js.add_dup"));
+    else if (skip) toast(t("review.js.add_skip"));
+    closeMediaPicker();
+    if (n) await refreshCluster(cid);
+  } catch (err) {
+    toast(tf("review.js.failed", { detail: String(err) }));
+  } finally {
+    btn.disabled = false; btn.textContent = prev;
+  }
+}
+
+// ---------- toast + inline save note ----------
+function toast(msg, undoFn) {
+  const wrap = document.getElementById("toasts");
+  const el = document.createElement("div"); el.className = "toast";
+  const span = document.createElement("span"); span.textContent = msg; el.appendChild(span);
+  if (undoFn) { const b = document.createElement("button"); b.textContent = t("review.js.undo"); b.onclick = () => { undoFn(); dismiss(); }; el.appendChild(b); }
+  wrap.appendChild(el);
+  const to = setTimeout(dismiss, 4200);
+  function dismiss() { clearTimeout(to); el.classList.add("out"); setTimeout(() => el.remove(), 260); }
+}
+function flashSaved(formEl) {
+  if (!formEl) return;
+  let note = formEl.querySelector(".saved-flash");
+  if (!note) { note = document.createElement("span"); note.className = "saved-flash"; (formEl.querySelector("button") || formEl).insertAdjacentElement("afterend", note); }
+  note.textContent = t("review.js.saved");
+  note.classList.remove("show"); void note.offsetWidth; note.classList.add("show");
+}
+
+// ---------- include / exclude ----------
+async function toggleItem(itemId) {
+  const card = cardOf(itemId);
+  const moment = card ? card.closest(".moment") : null;
+  const d = await (await fetch(`/items/${itemId}/toggle`, { method: "POST" })).json();
+  if (moment) {
+    await refreshCluster(moment.dataset.clusterId);
+  } else if (card) {
+    card.classList.toggle("excluded", d.included === false);
+    const btn = card.querySelector("button");
+    if (btn) btn.textContent = d.included ? t("review.leave_out") : t("review.include");
+  }
+  if (d.included === false) toast(t("review.js.left_out"), () => toggleItem(itemId));
+}
+
+// ---------- lightbox ----------
+let lbTrim = { id: null, start: 0, end: 0 };
+function openLightbox(itemId, type, opts) {
+  opts = opts || {};
+  const inner = document.getElementById("lightbox-inner");
+  if (type === "photo") {
+    const bust = "?v=" + (opts.rotation || 0) + "_" + ((opts.crop || "").replace(/[,.]/g, "")) + "_" + Date.now();
+    inner.innerHTML = `<img src="/media/${itemId}${bust}">` +
+      `<div class="lb-tools"><button onclick="rotateItem(${itemId})">${t('review.js.rotate')}</button>` +
+      `<button onclick="startCrop(${itemId}, ${JSON.stringify(opts.crop || null)})">${t('review.js.crop')}</button>` +
+      (opts.crop ? `<button onclick="clearCrop(${itemId})">${t('review.js.reset_crop')}</button>` : "") + `</div>`;
+  } else {
+    const cs = opts.start || 0, ce = opts.end || 0;
+    lbTrim = { id: itemId, start: cs, end: ce };
+    const endLabel = ce ? ce.toFixed(1) + "s" : t('review.js.end');
+    inner.innerHTML = `<video id="lb-video" src="/media/${itemId}" controls autoplay></video>` +
+      `<div class="lb-tools"><span>${t('review.js.trim')}</span> ${t('review.js.start')} <b id="lb-start">${cs.toFixed(1)}s</b> ` +
+      `<button onclick="setTrim('start')">${t('review.js.set_start')}</button> ${t('review.js.end')} <b id="lb-end">${endLabel}</b> ` +
+      `<button onclick="setTrim('end')">${t('review.js.set_end')}</button> <button onclick="saveTrim()">${t('review.js.save_trim')}</button></div>`;
+  }
+  document.getElementById("lightbox").style.display = "flex";
+}
+async function rotateItem(itemId) {
+  const d = await (await fetch(`/items/${itemId}/rotate`, { method: "POST" })).json();
+  const img = document.querySelector("#lightbox-inner img");
+  if (img) img.src = `/media/${itemId}?v=${d.rotation}_${Date.now()}`;
+  await refreshCluster(clusterIdOf(itemId));
+}
+function setTrim(which) {
+  const v = document.getElementById("lb-video");
+  if (which === "start") { lbTrim.start = v.currentTime; document.getElementById("lb-start").textContent = v.currentTime.toFixed(1) + "s"; }
+  else { lbTrim.end = v.currentTime; document.getElementById("lb-end").textContent = v.currentTime.toFixed(1) + "s"; }
+}
+async function saveTrim() { await fetch(`/items/${lbTrim.id}/trim`, { method: "POST", body: new URLSearchParams({ start: lbTrim.start, end: lbTrim.end }) }); closeLightbox(); }
+function startCrop(itemId, existing) {
+  const inner = document.getElementById("lightbox-inner");
+  inner.innerHTML = `<div class="crop-stage" id="crop-stage"><img id="crop-img" src="/media/${itemId}?full=1&t=${Date.now()}">` +
+    `<div class="crop-box" id="crop-box"><span class="crop-h tl"></span><span class="crop-h tr"></span><span class="crop-h bl"></span><span class="crop-h br"></span></div></div>` +
+    `<div class="lb-tools"><button onclick="applyCrop(${itemId})">${t('review.js.apply_crop')}</button>` +
+    `<button onclick="clearCrop(${itemId})">${t('review.js.reset_full')}</button><button onclick="closeLightbox()">${t('review.js.cancel')}</button></div>`;
+  const img = document.getElementById("crop-img");
+  const init = () => initCropBox(existing);
+  if (img.complete && img.naturalWidth) init(); else img.onload = init;
+}
+function setBoxPx(box, x, y, w, h) { box.style.left = x + "px"; box.style.top = y + "px"; box.style.width = w + "px"; box.style.height = h + "px"; }
+function initCropBox(existing) {
+  const img = document.getElementById("crop-img"), box = document.getElementById("crop-box");
+  const W = img.clientWidth, H = img.clientHeight;
+  let rx = 0.1, ry = 0.1, rw = 0.8, rh = 0.8;
+  if (existing) { const p = existing.split(",").map(Number); if (p.length === 4 && p.every((n) => !isNaN(n))) [rx, ry, rw, rh] = p; }
+  setBoxPx(box, rx * W, ry * H, rw * W, rh * H);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
+  function begin(e, mode) {
+    e.preventDefault(); e.stopPropagation();
+    const s = { x: e.clientX, y: e.clientY, L: box.offsetLeft, T: box.offsetTop, W: box.offsetWidth, H: box.offsetHeight };
+    const iw = img.clientWidth, ih = img.clientHeight;
+    function move(ev) {
+      const dx = ev.clientX - s.x, dy = ev.clientY - s.y; let L = s.L, T = s.T, w = s.W, h = s.H;
+      if (mode === "move") { L = clamp(s.L + dx, 0, iw - s.W); T = clamp(s.T + dy, 0, ih - s.H); }
+      else { if (mode.includes("l")) { L = clamp(s.L + dx, 0, s.L + s.W - 24); w = s.W + (s.L - L); }
+             if (mode.includes("r")) { w = clamp(s.W + dx, 24, iw - s.L); }
+             if (mode.includes("t")) { T = clamp(s.T + dy, 0, s.T + s.H - 24); h = s.H + (s.T - T); }
+             if (mode.includes("b")) { h = clamp(s.H + dy, 24, ih - s.T); } }
+      setBoxPx(box, L, T, w, h);
+    }
+    function end() { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", end); }
+    document.addEventListener("pointermove", move); document.addEventListener("pointerup", end);
+  }
+  box.onpointerdown = (e) => { if (e.target === box) begin(e, "move"); };
+  box.querySelector(".tl").onpointerdown = (e) => begin(e, "tl");
+  box.querySelector(".tr").onpointerdown = (e) => begin(e, "tr");
+  box.querySelector(".bl").onpointerdown = (e) => begin(e, "bl");
+  box.querySelector(".br").onpointerdown = (e) => begin(e, "br");
+}
+async function applyCrop(itemId) {
+  const img = document.getElementById("crop-img"), box = document.getElementById("crop-box");
+  const W = img.clientWidth, H = img.clientHeight;
+  const crop = [box.offsetLeft / W, box.offsetTop / H, box.offsetWidth / W, box.offsetHeight / H].map((v) => Math.max(0, Math.min(1, v)).toFixed(4)).join(",");
+  await fetch(`/items/${itemId}/crop`, { method: "POST", body: new URLSearchParams({ crop }) });
+  const cid = clusterIdOf(itemId); closeLightbox(); await refreshCluster(cid);
+}
+async function clearCrop(itemId) {
+  await fetch(`/items/${itemId}/crop`, { method: "POST", body: new URLSearchParams({ crop: "" }) });
+  const cid = clusterIdOf(itemId); closeLightbox(); await refreshCluster(cid);
+}
+function closeLightbox() { document.getElementById("lightbox").style.display = "none"; document.getElementById("lightbox-inner").innerHTML = ""; }
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeLightbox(); closeFaces(); } });
+
+// ---------- cover / assign / faces / place / find ----------
+async function setCover(clusterId, itemId) { await fetch(`/clusters/${clusterId}/cover/${itemId}`, { method: "POST" }); await refreshCluster(clusterId); }
+async function assignToCluster(itemId, clusterId) {
+  if (!clusterId) return;
+  const card = cardOf(itemId);
+  await fetch(`/items/${itemId}/move-to-cluster`, { method: "POST", body: new URLSearchParams({ cluster_id: clusterId }) });
+  if (card) card.remove();
+  const orphan = document.getElementById("orphan-cluster");
+  if (orphan && orphan.querySelectorAll(".item").length === 0) orphan.style.display = "none";
+  toast(t("review.js.saved"));
+}
+let facesItemId = null;
+function openFaces(itemId, tags) {
+  facesItemId = itemId;
+  const tagged = tags || [], untagged = ENROLLED.filter((p) => !tagged.includes(p));
+  const list = document.getElementById("faces-list"); list.innerHTML = "";
+  const section = (label) => { const s = document.createElement("div"); s.className = "faces-section"; s.textContent = label; list.appendChild(s); };
+  const rows = (people, action, btnLabel) => people.forEach((p) => {
+    const row = document.createElement("div"); row.className = "faces-row";
+    const span = document.createElement("span"); span.dir = "auto"; span.textContent = p;
+    const btn = document.createElement("button"); btn.className = "btn btn-secondary"; btn.textContent = btnLabel;
+    btn.onclick = () => faceAction(itemId, p, action); row.appendChild(span); row.appendChild(btn); list.appendChild(row);
+  });
+  if (tagged.length) { section(t("review.in_photo")); rows(tagged, "remove", t("review.remove")); }
+  if (untagged.length) { section(t("review.add_someone")); rows(untagged, "add", t("review.add")); }
+  if (!tagged.length && !untagged.length) { const p = document.createElement("p"); p.className = "quality"; p.textContent = t("review.no_enrolled"); list.appendChild(p); }
+  document.getElementById("faces-dialog").style.display = "flex";
+}
+function closeFaces() { document.getElementById("faces-dialog").style.display = "none"; }
+async function faceAction(itemId, label, action) {
+  const cid = clusterIdOf(itemId);
+  await fetch(`/items/${itemId}/faces`, { method: "POST", body: new URLSearchParams({ label, action }) });
+  closeFaces(); await refreshCluster(cid);
+}
+async function sendForId(itemId) {
+  const cid = clusterIdOf(itemId);
+  const res = await fetch(`/items/${itemId}/send-for-id`, { method: "POST" });
+  const data = await res.json();
+  if (!res.ok) { toast(tf('review.js.failed', { detail: data.detail })); return; }
+  await refreshCluster(cid); toast(tf('review.js.resolved', { place: data.place_name }));
+}
+async function saveItemPlace(e, itemId) {
+  e.preventDefault();
+  const form = e.target.closest(".item").querySelector(".item-place-form");
+  await fetch(`/items/${itemId}/place`, { method: "POST", body: new URLSearchParams({ place_name: form.querySelector("input").value }) });
+  flashSaved(form); return false;
+}
+document.addEventListener("submit", async (e) => {
+  const form = e.target.closest(".manual-place-form");
+  if (!form) return;
+  e.preventDefault();
+  const clusterId = form.dataset.clusterId;
+  await fetch(`/clusters/${clusterId}/place`, { method: "POST", body: new URLSearchParams(new FormData(form)) });
+  await refreshCluster(clusterId);
+});
+
+// ---------- day caption inline edit ----------
+function editDayTitle(td) {
+  const el = document.getElementById("day-caption-text"); if (!el) return;
+  const cur = el.classList.contains("placeholder") ? "" : el.textContent.trim();
+  const inp = document.createElement("input"); inp.className = "dh-sub-input"; inp.dir = "auto"; inp.value = cur;
+  el.replaceWith(inp); inp.focus();
+  const done = async () => {
+    await fetch(`/days/${td}/caption`, { method: "POST", body: new URLSearchParams({ caption_text: inp.value }) });
+    const d = document.createElement("div"); d.id = "day-caption-text"; d.className = "dh-sub" + (inp.value ? "" : " placeholder");
+    d.dataset.day = td; d.textContent = inp.value || t("review.no_day_title"); inp.replaceWith(d);
+  };
+  inp.addEventListener("blur", done);
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+}
+
+// ---------- trip settings (opening / closing / regroup) ----------
+document.getElementById("intro-form").addEventListener("submit", async (e) => { e.preventDefault(); await fetch("/intro", { method: "POST", body: new URLSearchParams(new FormData(e.target)) }); flashSaved(e.target); });
+document.getElementById("outro-form").addEventListener("submit", async (e) => { e.preventDefault(); await fetch("/outro", { method: "POST", body: new URLSearchParams(new FormData(e.target)) }); flashSaved(e.target); });
+document.getElementById("recluster-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  await fetch("/recluster", { method: "POST", body: new URLSearchParams(new FormData(e.target)) });
+  location.reload();
+});
+
+// ---------- generate + finish (Preview Draft) ----------
+function setGenPhase(key, state) { const li = document.querySelector(`#gen-phases li[data-phase="${key}"]`); if (li) { li.classList.remove("active", "done"); if (state) li.classList.add(state); } }
+// The four phases run strictly in order; the current one is identified from the
+// status message (English literals emitted by the backend, language-independent).
+// The soundtrack + video encode are the two passes of MoviePy's write step -
+// distinct messages now, so each gets its own row instead of sharing "encode".
+const GEN_PHASE_ORDER = ["prep", "titles", "audio", "encode"];
+function genPhaseKey(message) {
+  const m = message || "";
+  if (/encod\w*\s+video/i.test(m) || /^encoding video/i.test(m)) return "encode";
+  if (/soundtrack/i.test(m)) return "audio";
+  if (/titles|music/i.test(m)) return "titles";
+  return "prep"; // "Starting…" / "Preparing…"
+}
+function genPhasesFor(s) {
+  if (s.state === "done") { GEN_PHASE_ORDER.forEach((k) => setGenPhase(k, "done")); return; }
+  const i = GEN_PHASE_ORDER.indexOf(genPhaseKey(s.message));
+  GEN_PHASE_ORDER.forEach((k, idx) => setGenPhase(k, idx < i ? "done" : (idx === i ? "active" : "")));
+}
+function closeGen() { document.getElementById("gen-overlay").hidden = true; }
+async function generate() {
+  // The review-stage floating pill is the "Preview Draft" button - a fast,
+  // low-res preview. Send mode=draft explicitly; without a body the backend
+  // defaults to a full 1080p final render (the Preview page is where the final
+  // film is built).
+  const res = await fetch("/generate", { method: "POST", body: new URLSearchParams({ mode: "draft" }) });
+  if (!res.ok) { const d = await res.json(); toast(tf("review.js.error", { message: d.detail })); return; }
+  document.getElementById("gen-overlay").hidden = false;
+  document.getElementById("gen-progress-wrap").hidden = false;
+  document.getElementById("finish-panel").hidden = true;
+  pollGenerate();
+}
+async function pollGenerate() {
+  const s = await (await fetch("/generate/status")).json();
+  document.getElementById("gen-bar").style.width = (s.total ? Math.round((s.done / s.total) * 100) : (s.state === "running" ? 5 : 0)) + "%";
+  document.getElementById("generate-status").textContent = s.message + (s.total ? `  (${s.done}/${s.total})` : "");
+  genPhasesFor(s);
+  if (s.state === "running") { setTimeout(pollGenerate, 1000); return; }
+  if (s.state === "done" && s.output_name) { showFinish(s.output_name); }
+  else if (s.state === "error") { document.getElementById("generate-status").textContent = tf("review.js.error", { message: s.message }); }
+}
+function showFinish(name) {
+  document.getElementById("gen-progress-wrap").hidden = true;
+  const v = document.getElementById("finish-video"), url = "/output/" + encodeURIComponent(name);
+  v.src = url;
+  const dl = document.getElementById("finish-download"); dl.href = url; dl.setAttribute("download", name);
+  v.addEventListener("loadedmetadata", () => {
+    const dur = v.duration || 0, mm = Math.floor(dur / 60), ss = String(Math.round(dur % 60)).padStart(2, "0");
+    document.getElementById("finish-stats").textContent = tf("review.finish_stats", { items: {{ included_count }}, time: mm + ":" + ss });
+  }, { once: true });
+  document.getElementById("finish-panel").hidden = false;
+}
+
+// ---------- multi-select ----------
+const selected = new Set();
+function toggleSelect(e, id) {
+  const on = e.target.checked;
+  if (on) selected.add(String(id)); else selected.delete(String(id));
+  const card = cardOf(id); if (card) card.classList.toggle("selected", on);
+  updateBulkBar();
+}
+function applySelection() {
+  [...selected].forEach((id) => {
+    const card = cardOf(id);
+    if (card) { card.classList.add("selected"); const cb = card.querySelector(".card-select input"); if (cb) cb.checked = true; }
+    else selected.delete(id);
+  });
+  updateBulkBar();
+}
+function updateBulkBar() { document.getElementById("bulk-n").textContent = selected.size; document.getElementById("bulk-bar").hidden = selected.size === 0; }
+function clearSelection() { [...selected].forEach((id) => { const c = cardOf(id); if (c) { c.classList.remove("selected"); const cb = c.querySelector(".card-select input"); if (cb) cb.checked = false; } }); selected.clear(); updateBulkBar(); }
+function bulkBody() { const b = new URLSearchParams(); selected.forEach((id) => b.append("item_ids", id)); return b; }
+async function refreshAffected(a) { for (const cid of (a || [])) await refreshCluster(cid); }
+async function runBulk(url, extra) {
+  if (!selected.size) return;
+  const b = bulkBody(); for (const k in (extra || {})) b.append(k, extra[k]);
+  const n = selected.size;
+  const res = await fetch(url, { method: "POST", body: b });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); toast(tf("review.js.failed", { detail: e.detail || res.status })); return; }
+  const d = await res.json(); clearSelection(); await refreshAffected(d.affected); toast(tf("review.js.bulk_done", { n }));
+}
+function bulkInclude(value) { return runBulk("/items/bulk/include", { value }); }
+function bulkMove(sel) { const cid = sel.value; sel.value = ""; return cid ? runBulk("/items/bulk/move", { cluster_id: cid }) : null; }
+function bulkFaces(sel) { const label = sel.value; sel.value = ""; return label ? runBulk("/items/bulk/faces", { label, action: "add" }) : null; }
+function bulkPlace() { const i = document.getElementById("bulk-place-input"); const v = i.value; i.value = ""; return runBulk("/items/bulk/place", { place_name: v }); }
+(function initBulkBar() {
+  const mv = document.getElementById("bulk-move");
+  if (mv) CLUSTER_CHOICES.forEach((ch) => { const o = document.createElement("option"); o.value = ch.id; o.textContent = ch.label; mv.appendChild(o); });
+  const pe = document.getElementById("bulk-person");
+  if (pe) ENROLLED.forEach((p) => { const o = document.createElement("option"); o.value = p; o.textContent = p; pe.appendChild(o); });
+})();
+
+// ---------- drag-and-drop (event-delegated) ----------
+let draggedItem = null, draggedFromGrid = null, draggedFromClusterId = null;
+function animateReorder(grid, mutate) {
+  const before = new Map([...grid.querySelectorAll(".item")].map((el) => [el, el.getBoundingClientRect()]));
+  mutate();
+  for (const el of grid.querySelectorAll(".item")) {
+    if (el === draggedItem) continue;
+    const b = before.get(el); if (!b) continue;
+    const a = el.getBoundingClientRect(); const dx = b.left - a.left, dy = b.top - a.top;
+    if (dx || dy) { el.style.transition = "none"; el.style.transform = `translate(${dx}px, ${dy}px)`; el.getBoundingClientRect(); el.style.transition = "transform .16s ease"; el.style.transform = ""; }
+  }
+}
+document.addEventListener("dragstart", (e) => {
+  const handle = e.target.closest(".drag-handle"); if (!handle) return;
+  const grid = handle.closest(".grid");
+  draggedItem = handle.closest(".item"); draggedFromGrid = grid; draggedFromClusterId = grid ? grid.dataset.cluster : undefined;
+  e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", draggedItem.dataset.itemId);
+  try { e.dataTransfer.setDragImage(draggedItem, 20, 20); } catch (_) {}
+  requestAnimationFrame(() => draggedItem && draggedItem.classList.add("dragging"));
+});
+document.addEventListener("dragover", (e) => {
+  const grid = e.target.closest(".grid");
+  if (!draggedItem || !grid || grid !== draggedFromGrid) return;
+  e.preventDefault();
+  const over = e.target.closest(".item"); if (!over || over === draggedItem) return;
+  const box = over.getBoundingClientRect(); const after = e.clientX > box.left + box.width / 2;
+  animateReorder(grid, () => (after ? over.after(draggedItem) : over.before(draggedItem)));
+});
+document.addEventListener("drop", async (e) => {
+  const grid = e.target.closest(".grid"); if (!draggedItem || !grid) return;
+  e.preventDefault();
+  if (grid === draggedFromGrid) {
+    const ids = [...grid.querySelectorAll(".item")].map((el) => el.dataset.itemId);
+    await fetch("/reorder", { method: "POST", body: new URLSearchParams(ids.map((id) => ["item_ids_in_order", id])) });
+  } else {
+    const target = grid.dataset.cluster; if (!target) return;
+    const movedId = draggedItem.dataset.itemId;
+    await fetch(`/items/${movedId}/move-to-cluster`, { method: "POST", body: new URLSearchParams({ cluster_id: target }) });
+    if (draggedFromClusterId) await refreshCluster(draggedFromClusterId); else { draggedItem.remove(); }
+    await refreshCluster(target);
+  }
+});
+document.addEventListener("dragend", () => { if (draggedItem) draggedItem.classList.remove("dragging"); draggedItem = null; draggedFromGrid = null; draggedFromClusterId = null; });
+</script>
+{% endblock %}

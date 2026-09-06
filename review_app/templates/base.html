@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ lang_dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ app_name }}{% endblock %}</title>
+<link rel="stylesheet" href="/static/app.css?v={{ asset_ver('app.css') }}">
+<script>
+// Current-language lookup table + helpers for JS-generated strings.
+window.T = {{ i18n_json | safe }};
+window.t = (k, d) => (window.T && window.T[k] != null ? window.T[k] : (d != null ? d : k));
+window.tf = (k, vars, d) => {
+  let s = window.t(k, d);
+  for (const key in (vars || {})) s = s.split('{' + key + '}').join(vars[key]);
+  return s;
+};
+</script>
+</head>
+<body>
+{% set path = request.url.path %}
+{% set workspace = path.startswith('/review') or path.startswith('/preview') or path.startswith('/finish') %}
+{% set has_menu = workspace or path.startswith('/setup') or path.startswith('/trip') or path.startswith('/logs') %}
+
+<header class="app-header {{ 'is-workspace' if workspace else 'is-minimal' }}">
+  <div class="ah-left">
+    {% if has_menu %}
+    <div class="ah-menu-wrap">
+      <button class="icon-btn" id="ah-menu-btn" aria-label="{{ t('nav.menu') }}" aria-haspopup="true" onclick="toggleAppMenu(event)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div class="ah-menu" id="ah-menu" hidden>
+        <a href="/trip">{{ t('projects.switch') }}</a>
+        <a href="/review">{{ t('nav.story') }}</a>
+        <div class="ah-menu-label">{{ t('nav.setup') }}</div>
+        <a href="/setup#step-1">{{ t('setup.wiz.step_photos') }}</a>
+        <a href="/setup#step-2">{{ t('setup.wiz.step_people') }}</a>
+        <a href="/setup#step-3">{{ t('setup.wiz.step_mood') }}</a>
+        <a href="/setup#step-4">{{ t('setup.wiz.step_music') }}</a>
+        <a href="/setup#step-5">{{ t('setup.wiz.step_import') }}</a>
+        <hr>
+        <a href="/logs">{{ t('nav.log') }}</a>
+        <a href="/">{{ t('nav.home') }}</a>
+      </div>
+    </div>
+    {% endif %}
+    <a class="ah-brand" href="/"><b>{{ app_name }}</b>{% if workspace %}<span class="ah-sep">/</span><span class="ah-maker">{{ t('feature.trip.name') }}</span>{% endif %}</a>
+    {% if workspace %}
+    <button class="ah-trip" type="button" aria-haspopup="true" onclick="toggleAppMenu(event)">{{ trip_name }}<span class="ah-caret">⌄</span></button>
+    {% endif %}
+  </div>
+
+  {% if workspace %}
+  <nav class="ah-tabs">
+    <a href="/review" class="ah-tab {{ 'on' if path.startswith('/review') }}">{{ t('nav.story') }}</a>
+    <a href="/preview" class="ah-tab {{ 'on' if path.startswith('/preview') }}">{{ t('nav.preview') }}</a>
+    <a href="/finish" class="ah-tab {{ 'on' if path.startswith('/finish') }}">{{ t('nav.finish') }}</a>
+  </nav>
+  {% endif %}
+
+  <div class="ah-right">
+    {% if workspace %}
+    <span class="ah-save" id="save-state">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      {{ t('nav.save') }}
+    </span>
+    {% endif %}
+    <a class="ah-lang" href="/lang/{{ 'he' if lang == 'en' else 'en' }}" title="{{ t('lang.switch_title') }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+      <span class="{{ '' if lang == 'en' else 'lang-dim' }}">EN</span><span class="ah-langsep">·</span><span class="{{ '' if lang == 'he' else 'lang-dim' }}">עב</span>
+    </a>
+  </div>
+</header>
+
+{% if workspace %}<main class="ws-main">{% else %}<div class="wrap">{% endif %}
+{% block content %}{% endblock %}
+{% if workspace %}</main>{% else %}</div>{% endif %}
+<script>
+function toggleAppMenu(e){
+  e.stopPropagation();
+  const m = document.getElementById('ah-menu'); if(!m) return;
+  const willOpen = m.hidden; m.hidden = !willOpen;
+  if(willOpen) setTimeout(()=>document.addEventListener('click', closeAppMenu, {once:true}), 0);
+}
+function closeAppMenu(){ const m = document.getElementById('ah-menu'); if(m) m.hidden = true; }
+</script>
+{% block script %}{% endblock %}
+</body>
+</html>

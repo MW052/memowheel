@@ -1,0 +1,57 @@
+# --- Web app ---
+fastapi>=0.115
+uvicorn[standard]>=0.32
+python-multipart>=0.0.12
+jinja2>=3.1
+
+# --- Image / EXIF ---
+Pillow>=10.4
+numpy>=1.26
+
+# --- Quality scoring ---
+opencv-python>=4.10
+
+# --- Face recognition ---
+# Detection (YuNet) + recognition (SFace) run through OpenCV's dnn module
+# (cv2.FaceDetectorYN / cv2.FaceRecognizerSF), so opencv-python above is the
+# only dependency. The two small ONNX models ship in the repo under
+# models/faces/ (YuNet MIT, SFace Apache-2.0) - no first-run download, no
+# non-commercial weights. Needs a build of OpenCV with these APIs (>=4.5.4).
+
+# --- Video assembly ---
+# MoviePy 2.x - no .editor submodule, with_*/subclipped/effects-based API.
+# generate/assemble.py targets this version.
+moviepy>=2.0
+
+# --- Cloud place-ID (pluggable vision LLM) ---
+# cloud/llm.py routes place-ID to the user's chosen provider. OpenAI (native
+# Responses API) and Gemini (via Google's OpenAI-compatible endpoint) both use
+# the openai SDK; Claude uses anthropic. Only the selected one is imported.
+# openai's Responses API namespace didn't exist on older SDKs; 2.47.0 works.
+openai>=2.47.0
+# Only needed if a user selects the Claude/Anthropic provider (lazily imported).
+anthropic>=0.40
+
+# --- Offline reverse geocoding (future GPS-tagged trips) ---
+reverse_geocoder>=1.5
+
+# --- Config / env ---
+python-dotenv>=1.0
+
+# --- API-key storage ---
+# secret_store.py keeps the LLM API key in the OS keychain (Windows Credential
+# Locker via WinVaultKeyring = DPAPI-encrypted per user) instead of plaintext,
+# falling back to settings.json only when no backend is available. On Windows the
+# backend needs pywin32-ctypes (imported as win32ctypes); keyring pulls it in.
+keyring>=25
+pywin32-ctypes>=0.2; platform_system == "Windows"
+
+# --- RTL text shaping (Hebrew captions) ---
+# Pillow (which TextClip renders through) doesn't reorder bidirectional
+# text - Hebrew comes out left-to-right without this.
+python-bidi>=0.6
+
+# --- System-tray launcher (windowless run) ---
+# tray_app.py runs the server with no console and shows a tray icon (Open /
+# View log / Quit). Icon is drawn with Pillow (already a dependency).
+pystray>=0.19

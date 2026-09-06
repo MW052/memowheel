@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ t('preview.title') }}{% endblock %}
+
+{% block content %}
+<div class="pf-page">
+  <h1 class="pf-h1">{{ t('preview.title') }}</h1>
+  <p class="pf-sub">{{ t('preview.sub') }}</p>
+
+  <div id="pf-player-wrap" {% if not latest %}hidden{% endif %}>
+    <video class="pf-player" id="pf-video" controls preload="metadata" {% if latest %}src="/output/{{ latest | urlencode }}"{% endif %}></video>
+  </div>
+  {% if not latest %}
+  <div class="pf-empty" id="pf-empty">{{ t('preview.none') }}</div>
+  {% endif %}
+
+  <div id="pf-progress" class="pf-progress" hidden>
+    <ol class="phases" id="gen-phases">
+      <li data-phase="prep"><span class="ph-mark"></span>{{ t('review.gen_prep') }}</li>
+      <li data-phase="titles"><span class="ph-mark"></span>{{ t('review.gen_titles') }}</li>
+      <li data-phase="encode"><span class="ph-mark"></span>{{ t('review.gen_encode') }}</li>
+    </ol>
+    <div class="progress"><div class="progress-bar" id="gen-bar"></div></div>
+    <div id="gen-status" class="quality" style="margin-top:6px"></div>
+  </div>
+
+  <p class="pf-done-note" id="pf-done-note" hidden></p>
+
+  <fieldset class="pf-render" id="pf-render">
+    <legend>{{ t('preview.render_label') }}</legend>
+    <label class="pf-render-opt"><input type="radio" name="render" value="multi" {% if render_parallel %}checked{% endif %}><span>{{ t('preview.render_multi') }}</span></label>
+    <label class="pf-render-opt"><input type="radio" name="render" value="single" {% if not render_parallel %}checked{% endif %}><span>{{ t('preview.render_single') }}</span></label>
+    <p class="pf-render-hint">{{ t('preview.render_hint') }}</p>
+  </fieldset>
+
+  <div class="pf-actions">
+    <button class="btn btn-secondary btn-lg gen-btn" id="draft-btn" onclick="rebuild('draft')" {% if included_count == 0 %}disabled{% endif %}>
+      {{ t('preview.build_draft') }}
+    </button>
+    <button class="btn btn-primary btn-lg gen-btn" id="rebuild-btn" onclick="rebuild('final')" {% if included_count == 0 %}disabled{% endif %}>
+      {{ t('preview.rebuild') if latest else t('preview.build') }}
+    </button>
+    <a class="btn btn-secondary" href="/review">&larr; {{ t('preview.back_story') }}</a>
+    {% if latest %}<a class="btn btn-secondary" href="/finish">{{ t('preview.to_finish') }} &rarr;</a>{% endif %}
+  </div>
+  <p class="pf-modes-hint">{{ t('preview.modes_hint') }}</p>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+function genPhase(k, s) { const li = document.querySelector(`#gen-phases li[data-phase="${k}"]`); if (li) { li.classList.remove('active', 'done'); if (s) li.classList.add(s); } }
+function genPhases(s) {
+  if (s.state === 'done') { ['prep', 'titles', 'encode'].forEach(k => genPhase(k, 'done')); return; }
+  const enc = /encod|rendering|combin|soundtrack/i.test(s.message || ''), prep = /prepar/i.test(s.message || '');
+  genPhase('prep', enc ? 'done' : 'active');
+  genPhase('titles', enc ? 'done' : (prep ? '' : 'active'));
+  genPhase('encode', enc ? 'active' : '');
+}
+async function rebuild(mode) {
+  mode = mode || 'final';
+  const body = new URLSearchParams({ mode });
+  // The single/multiprocessor choice applies to the final render only (draft is
+  // always a single fast pass). Sending it also saves it as the default.
+  if (mode === 'final') {
+    const sel = document.querySelector('#pf-render input[name="render"]:checked');
+    if (sel) body.set('render', sel.value);
+  }
+  const res = await fetch('/generate', { method: 'POST', body });
+  if (!res.ok) { const d = await res.json(); alert(d.detail); return; }
+  const empty = document.getElementById('pf-empty'); if (empty) empty.hidden = true;
+  const note = document.getElementById('pf-done-note'); if (note) note.hidden = true;
+  document.querySelectorAll('.gen-btn').forEach(b => b.disabled = true);
+  document.getElementById('pf-progress').hidden = false;
+  poll();
+}
+async function poll() {
+  const s = await (await fetch('/generate/status')).json();
+  document.getElementById('gen-bar').style.width = (s.total ? Math.round(s.done / s.total * 100) : (s.state === 'running' ? 5 : 0)) + '%';
+  // Messages already embed their own counts where relevant (e.g. "(3/8 parts done)"),
+  // so show the message as-is; the bar conveys the numeric progress.
+  document.getElementById('gen-status').textContent = s.message || '';
+  genPhases(s);
+  if (s.state === 'running') { setTimeout(poll, 1000); return; }
+  document.querySelectorAll('.gen-btn').forEach(b => b.disabled = false);
+  if (s.state === 'done' && s.output_name) {
+    document.getElementById('pf-progress').hidden = true;
+    const note = document.getElementById('pf-done-note');
+    if (note && s.elapsed) {
+      note.textContent = tf(s.mode === 'draft' ? 'preview.js.done_draft' : 'preview.js.done_final', { time: s.elapsed });
+      note.hidden = false;
+    }
+    const wrap = document.getElementById('pf-player-wrap'); wrap.hidden = false;
+    const v = document.getElementById('pf-video'); v.src = '/output/' + encodeURIComponent(s.output_name) + '?t=' + Date.now();
+    v.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('rebuild-btn').textContent = t('preview.rebuild');
+  } else if (s.state === 'error') {
+    document.getElementById('gen-status').textContent = tf('review.js.error', { message: s.message });
+  }
+}
+</script>
+{% endblock %}

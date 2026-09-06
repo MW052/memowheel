@@ -1,0 +1,876 @@
+{% extends "base.html" %}
+{% block title %}{{ t('setup.title') }}{% endblock %}
+
+{% block content %}
+<div class="wiz-shell">
+{% if item_count %}
+<div class="wiz-resume">{{ t('setup.items_imported', n=item_count) }} · <a href="/review">{{ t('setup.go_review') }}</a></div>
+{% endif %}
+
+<!-- ============ STEP 1 · CHOOSE PHOTOS ============ -->
+<section class="wstep" data-step="1">
+  <div class="card-xl wiz-card">
+    <div class="step-head"><span class="step-badge">01</span><h2>{{ t('setup.wiz.photos_h') }}</h2></div>
+    <p class="step-sub">{{ t('setup.wiz.photos_sub') }}</p>
+
+    <div class="choose-row">
+      <div class="choose-col">
+        <input type="hidden" id="import_folder">
+        <button type="button" class="dropzone" id="dropzone" onclick="chooseTripFolder()">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <span class="dz-title">{{ t('setup.wiz.choose_folder') }}</span>
+          <span class="dz-sub">{{ t('setup.wiz.click_browse') }}</span>
+        </button>
+        <div id="scan-loading" class="scan-loading" style="display:none">{{ t('setup.wiz.scanning') }}</div>
+        <div id="scan-result" class="scan-card" style="display:none">
+          <div class="scan-name" id="scan-name"></div>
+          <div class="scan-dates" id="scan-dates"></div>
+          <div class="scan-counts" id="scan-counts"></div>
+
+          <div class="field date-range" id="date-range" style="display:none;margin-top:12px">
+            <label>{{ t('setup.wiz.dates_label') }}</label>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <input type="date" id="date_start" style="max-width:160px">
+              <span aria-hidden="true">&ndash;</span>
+              <input type="date" id="date_end" style="max-width:160px">
+            </div>
+            <div class="quality" style="margin-top:4px">{{ t('setup.wiz.dates_hint') }}</div>
+            <div class="quality" id="date-itin-note" style="display:none;margin-top:4px">
+              {{ t('setup.wiz.dates_from_itinerary') }}
+              <button type="button" class="btn btn-ghost" style="padding:0 6px" onclick="resetDatesToItinerary()">{{ t('setup.wiz.dates_reset') }}</button>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-ghost btn-relink" onclick="chooseTripFolder()">{{ t('setup.wiz.change_folder') }}</button>
+        </div>
+
+        <details class="adv-inline">
+          <summary><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .8-1 1.7M12 17h.01"/></svg> {{ t('setup.wiz.trouble') }}</summary>
+          <div class="field"><label for="gap">{{ t('setup.wiz.group_label') }}</label>
+            <input type="number" id="gap" value="{{ gap_default }}" step="1" min="1" style="max-width:120px"></div>
+          <div class="field"><label for="exclude">{{ t('setup.wiz.exclude_label') }}</label>
+            <input type="text" id="exclude" placeholder="{{ t('setup.exclude_ph') }}"></div>
+        </details>
+
+        <div class="info-note"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.9 4.3L18 8l-3 3 .8 4.4L12 13.4 8.2 15.4 9 11 6 8l4.1-.7z"/></svg></span>{{ t('setup.wiz.will_read') }}</div>
+      </div>
+      <div class="thumb-stack" id="thumb-stack" aria-hidden="true"></div>
+    </div>
+
+    <div style="text-align:center;color:#a89c86;margin:14px 0;font-size:.9em;text-transform:uppercase;letter-spacing:.08em">{{ t('setup.wiz.or') }}</div>
+
+    <div class="upload-drop" id="upload-drop"
+         style="border:2px dashed #c9bfae;border-radius:12px;padding:18px;text-align:center;transition:border-color .15s,background .15s">
+      <input type="file" id="upload-files" multiple accept="image/*,video/*" style="display:none" onchange="uploadChosen(this.files)">
+      <p class="quality" style="margin:0 0 10px">{{ t('setup.wiz.drop_hint') }}</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('upload-files').click()">{{ t('setup.wiz.choose_files') }}</button>
+      </div>
+      <div id="upload-progress" style="display:none;margin-top:12px">
+        <div class="progress"><div class="progress-bar" id="upload-bar"></div></div>
+        <div id="upload-msg" class="quality" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="wiz-nav">
+      <span></span>
+      <button type="button" class="btn btn-primary btn-lg" id="s1-continue" onclick="goStep(2)" disabled>{{ t('setup.wiz.looks_right') }} &rarr;</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STEP 2 · PEOPLE ============ -->
+<section class="wstep" data-step="2">
+  <div class="card-xl wiz-card">
+    <div class="step-head"><span class="step-badge">02</span><h2>{{ t('setup.wiz.people_h') }}</h2></div>
+    <p class="step-sub">{{ t('setup.wiz.people_sub') }}</p>
+
+    {% if people %}
+    <div class="people-list">
+      {% for p in people %}
+      <div class="person-card" data-old="{{ p.person_label }}">
+        <div class="person-avatar">{{ p.person_label[:1] | upper }}</div>
+        <div class="person-info">
+          <input class="person-rename" dir="auto" value="{{ p.person_label }}" aria-label="name">
+          <div class="person-meta">{{ t('setup.ref_photos', n=p.n) }}</div>
+        </div>
+        <span class="ready"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>{{ t('setup.wiz.ready') }}</span>
+        <div class="person-acts">
+          <button onclick="renamePerson(this)">{{ t('setup.rename') }}</button>
+          <button onclick='deletePerson({{ p.person_label | tojson }})'>{{ t('setup.remove') }}</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form id="person-form" onsubmit="return addPerson(event)">
+      <button type="button" class="add-dashed" onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden">
+        <span class="add-plus">+</span> {{ t('setup.wiz.add_another') if people else t('setup.add_person') }}
+      </button>
+      <div class="add-person-fields" {% if people %}hidden{% endif %}>
+        <div class="row-form">
+          <input type="text" name="name" dir="auto" placeholder="{{ t('setup.person_ph') }}" required>
+          <input type="file" id="person-photos" name="photos" accept="image/*" multiple required class="file-native" onchange="showChosenFiles(this)">
+          <label for="person-photos" class="btn btn-secondary file-btn">{{ t('setup.choose_file') }}</label>
+          <span class="file-chosen" data-empty="{{ t('setup.no_file_chosen') }}">{{ t('setup.no_file_chosen') }}</span>
+          <button type="submit" class="btn btn-secondary">{{ t('setup.add_person') }}</button>
+        </div>
+        <small>{{ t('setup.enroll_note') }}</small>
+      </div>
+    </form>
+
+    <div class="wiz-nav">
+      <button type="button" class="btn btn-secondary" onclick="goStep(1)">&larr; {{ t('setup.wiz.back') }}</button>
+      <span class="nav-right">
+        <button type="button" class="btn btn-ghost" onclick="goStep(3)">{{ t('setup.wiz.skip') }}</button>
+        <button type="button" class="btn btn-primary btn-lg" onclick="goStep(3)">{{ t('setup.wiz.continue') }} &rarr;</button>
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STEP 3 · FILM MOOD ============ -->
+<section class="wstep" data-step="3">
+  <form id="mood-form">
+    <div class="card-xl wiz-card">
+      <div class="step-head"><span class="step-badge">03</span><h2>{{ t('setup.wiz.mood_h') }}</h2></div>
+      <p class="step-sub">{{ t('setup.wiz.mood_sub') }}</p>
+
+      <input type="hidden" name="mood_preset" id="mood_preset" value="{{ settings.mood_preset }}">
+      <div class="mood-grid">
+        {% for key in ['keepsake', 'modern', 'lively'] %}
+        <button type="button" class="tile mood-card {{ 'sel' if settings.mood_preset == key }}" data-preset="{{ key }}"
+                role="radio" aria-checked="{{ 'true' if settings.mood_preset == key else 'false' }}">
+          <img class="tile-photo" id="mood-photo-{{ key }}" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
+          <span class="tile-name">{{ t('setup.wiz.mood_' ~ key) }}</span>
+          <span class="tile-desc">{{ t('setup.wiz.mood_' ~ key ~ '_q') }}</span>
+          <span class="tile-check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12l4 4 10-11"/></svg></span>
+        </button>
+        {% endfor %}
+      </div>
+
+      <div class="info-note"><span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.9 4.3L18 8l-3 3 .8 4.4L12 13.4 8.2 15.4 9 11 6 8l4.1-.7z"/></svg></span>{{ t('setup.wiz.mood_auto') }}</div>
+
+      <details class="adv-inline" id="customize">
+        <summary>{{ t('setup.wiz.customize') }}</summary>
+        <div class="field"><label>{{ t('setup.video_look') }}</label>
+          <div class="style-picker">
+            {% for key in ['keepsake', 'espresso', 'minimal'] %}
+            <label><input type="radio" name="video_style" value="{{ key }}" {{ 'checked' if settings.video_style==key }} onchange="markCustom()">
+              {{ t('setup.style_' ~ key) }} <span class="quality">{{ t('setup.style_' ~ key ~ '_q') }}</span></label>
+            {% endfor %}
+          </div></div>
+        <div class="field"><label>{{ t('setup.motion') }}</label>
+          <div class="style-picker">
+            {% for key, lbl in [('fade','fade'),('static','static'),('ken_burns','kenburns')] %}
+            <label><input type="radio" name="motion_style" value="{{ key }}" {{ 'checked' if settings.motion_style==key }} onchange="markCustom()">
+              {{ t('setup.motion_' ~ lbl) }} <span class="quality">{{ t('setup.motion_' ~ lbl ~ '_q') }}</span></label>
+            {% endfor %}
+          </div></div>
+        <div class="field"><label>{{ t('setup.photo_seconds') }}</label>
+          <input type="number" name="photo_duration_seconds" min="0.5" step="0.5" style="max-width:120px" value="{{ settings.photo_duration_seconds }}" onchange="markCustom()">
+          <div class="quality">{{ t('setup.photo_seconds_q') }}</div></div>
+      </details>
+
+      <div class="wiz-nav">
+        <button type="button" class="btn btn-secondary" onclick="goStep(2)">&larr; {{ t('setup.wiz.back') }}</button>
+        <button type="submit" class="btn btn-primary btn-lg">{{ t('setup.wiz.continue') }} &rarr;</button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<!-- ============ STEP 4 · MUSIC ============ -->
+<section class="wstep" data-step="4">
+  <div class="card-xl wiz-card">
+    <div class="step-head"><span class="step-badge">04</span><h2>{{ t('setup.wiz.music_h') }}</h2></div>
+    <p class="step-sub">{{ t('setup.wiz.music_sub') }}</p>
+
+    {% if not music_tracks %}
+    <div class="music-choice">
+      <button type="button" class="tile music-opt" onclick="document.getElementById('music-manager').hidden=false;this.closest('.music-choice').hidden=true">
+        <span class="mo-ico"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></span>
+        <span class="tile-name">{{ t('setup.wiz.music_use') }}</span>
+        <span class="tile-desc">{{ t('setup.wiz.music_use_sub') }}</span>
+      </button>
+      <button type="button" class="tile music-opt" onclick="goStep(5)">
+        <span class="mo-ico"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/><path d="M3 3l18 18"/></svg></span>
+        <span class="tile-name">{{ t('setup.wiz.music_skip') }}</span>
+        <span class="tile-desc">{{ t('setup.wiz.music_skip_sub') }}</span>
+      </button>
+    </div>
+    {% endif %}
+
+    <div id="music-manager" {% if not music_tracks %}hidden{% endif %}>
+      {% if music_tracks %}
+      <div id="music-list">
+        {% for name in music_tracks %}
+        <div class="music-row" data-name="{{ name }}">
+          <span class="music-name" dir="auto">{{ name }}</span>
+          <audio controls preload="none" src="/media/music/{{ name | urlencode }}"></audio>
+          <span class="music-actions">
+            <button type="button" onclick='moveMusic({{ name | tojson }}, -1)' title="{{ t('setup.move_up') }}">&#9650;</button>
+            <button type="button" onclick='moveMusic({{ name | tojson }}, 1)' title="{{ t('setup.move_down') }}">&#9660;</button>
+            <button type="button" onclick='deleteMusic({{ name | tojson }})'>{{ t('setup.remove') }}</button>
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <form id="music-form" onsubmit="return uploadMusic(event)" style="margin-top:12px">
+        <div class="row-form">
+          <!-- Native <input type=file> renders "Choose File"/"No file chosen" in the
+               browser's UI language, which can't be localized. Hide it and drive it
+               from a styled label + filename span we control (so both read Hebrew). -->
+          <input type="file" id="music-file" name="tracks" accept="audio/mpeg,.mp3" multiple required class="file-native"
+                 onchange="showChosenFiles(this)">
+          <label for="music-file" class="btn btn-secondary file-btn">{{ t('setup.choose_file') }}</label>
+          <span class="file-chosen" id="music-file-chosen" data-empty="{{ t('setup.no_file_chosen') }}">{{ t('setup.no_file_chosen') }}</span>
+          <button type="submit" class="btn btn-secondary">{{ t('setup.add_music') }}</button>
+        </div>
+      </form>
+      <details class="music-sources">
+        <summary>{{ t('setup.free_music') }}</summary>
+        <p class="hint">{{ t('setup.free_music_hint') }}</p>
+        <ul>
+          <li><strong>{{ t('setup.no_credit') }}</strong>
+            <a href="https://studio.youtube.com" target="_blank" rel="noopener">YouTube Audio Library</a> ·
+            <a href="https://pixabay.com/music/" target="_blank" rel="noopener">Pixabay Music</a></li>
+          <li><strong>{{ t('setup.needs_credit') }}</strong>
+            <a href="https://freemusicarchive.org" target="_blank" rel="noopener">Free Music Archive</a> ·
+            <a href="https://incompetech.com" target="_blank" rel="noopener">Incompetech</a> ·
+            <a href="https://www.bensound.com" target="_blank" rel="noopener">Bensound</a></li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="wiz-nav">
+      <button type="button" class="btn btn-secondary" onclick="goStep(3)">&larr; {{ t('setup.wiz.back') }}</button>
+      <button type="button" class="btn btn-primary btn-lg" onclick="goStep(5)">{{ t('setup.wiz.continue') }} &rarr;</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STEP 5 · IMPORT ============ -->
+<section class="wstep" data-step="5">
+  <div class="card-xl wiz-card">
+    <div class="step-head"><span class="step-badge">05</span><h2>{{ t('setup.wiz.import_h') }}</h2></div>
+    <p class="step-sub">{{ t('setup.wiz.import_sub') }}</p>
+
+    <div class="import-folder-line" id="import-folder-line"></div>
+    <ol class="phases" id="phases">
+      <li data-phase="read"><span class="ph-mark"></span>{{ t('setup.wiz.phase_read') }}</li>
+      <li data-phase="people"><span class="ph-mark"></span>{{ t('setup.wiz.phase_people') }}</li>
+      <li data-phase="group"><span class="ph-mark"></span>{{ t('setup.wiz.phase_group') }}</li>
+      <li data-phase="draft"><span class="ph-mark"></span>{{ t('setup.wiz.phase_draft') }}</li>
+    </ol>
+    <div id="import-progress" style="display:none">
+      <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+      <div id="progress-msg" class="quality" style="margin-top:6px"></div>
+    </div>
+    <div class="info-note"><span class="ico">&#127916;</span>{{ t('setup.wiz.import_ready_note') }}</div>
+    <div id="import-done" style="display:none"></div>
+
+    <div class="wiz-nav">
+      <button type="button" class="btn btn-secondary" onclick="goStep(4)">&larr; {{ t('setup.wiz.back') }}</button>
+      <button id="import-btn" class="btn btn-primary btn-lg" onclick="startImport()">{{ t('setup.start_import') }}</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STEP 6 · FINISH ============ -->
+<section class="wstep" data-step="6">
+  <div class="card-xl wiz-card wiz-finish">
+    <div class="step-head"><span class="step-badge">06</span><h2>{{ t('setup.wiz.finish_h') }}</h2></div>
+    <p class="step-sub" id="finish-summary">{{ t('setup.wiz.finish_sub') }}</p>
+    <a class="btn btn-primary btn-lg" href="/review">{{ t('setup.wiz.open_review') }}</a>
+  </div>
+</section>
+
+<!-- ============ ADVANCED (off the critical path) ============ -->
+{# Each advanced group is a button (with a tooltip) that opens a modal showing
+   ONLY its own settings, instead of one long rectangle split by faint lines.
+   The place/music/output modals share a single <form> so any Save posts the
+   whole settings set (unedited fields keep their server values). #}
+<details class="adv-panel" id="adv-panel">
+  <summary>&#9881; {{ t('setup.wiz.advanced') }}</summary>
+
+  <div class="adv-grid">
+    <button type="button" class="btn btn-secondary adv-tile" title="{{ t('setup.adv.place_tip') }}" onclick="openAdvModal('place')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+      {{ t('setup.wiz.place_recognition') }}
+    </button>
+    <button type="button" class="btn btn-secondary adv-tile" title="{{ t('setup.adv.music_tip') }}" onclick="openAdvModal('music')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>
+      {{ t('setup.adv.music') }}
+    </button>
+    <button type="button" class="btn btn-secondary adv-tile" title="{{ t('setup.adv.itinerary_tip') }}" onclick="openAdvModal('itinerary')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+      {{ t('setup.adv.itinerary') }}
+    </button>
+    <button type="button" class="btn btn-secondary adv-tile" title="{{ t('setup.adv.output_tip') }}" onclick="openAdvModal('output')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      {{ t('setup.adv.output') }}
+    </button>
+    <button type="button" class="btn btn-secondary adv-tile" title="{{ t('setup.adv.reset_tip') }}" onclick="openAdvModal('reset')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      {{ t('setup.start_over') }}
+    </button>
+  </div>
+
+  <form id="advanced-form" onsubmit="return saveAdvanced(event)">
+    <!-- SMART PLACE-FINDING -->
+    <div class="picker adv-modal" id="adv-modal-place" style="display:none" onclick="if(event.target===this)closeAdvModal('place')">
+      <div class="picker-box adv-modal-box">
+        <div class="adv-modal-head"><h3>{{ t('setup.wiz.place_recognition') }}</h3>
+          <button type="button" class="adv-modal-x" aria-label="{{ t('setup.close') }}" onclick="closeAdvModal('place')">&times;</button></div>
+        <div class="adv-modal-body">
+          <div class="adv-note">{{ t('setup.wiz.place_note') }}</div>
+          <label class="toggle-row" style="font-weight:400">
+            <input type="checkbox" name="auto_place_id" id="auto_place_id" {{ 'checked' if settings.auto_place_id_on }} onchange="autoToggle()">
+            <span id="place-toggle-label">{{ t('setup.wiz.place_on') if settings.auto_place_id_on else t('setup.wiz.place_off') }}</span>
+          </label>
+          <div id="llm-fields" style="{{ '' if settings.auto_place_id_on else 'display:none' }}">
+            <div class="field"><label>{{ t('setup.trip_country') }}</label>
+              <input type="text" name="trip_country" id="trip_country" value="{{ settings.trip_country }}" placeholder="{{ t('setup.trip_country_ph') }}">
+              <div class="quality">{{ t('setup.trip_country_q') }}</div></div>
+            <div class="field"><label>{{ t('setup.provider') }}</label>
+              <select name="llm_provider" id="llm_provider" onchange="providerChanged()">
+                <option value="openai" {{ 'selected' if settings.llm_provider=='openai' }}>OpenAI</option>
+                <option value="anthropic" {{ 'selected' if settings.llm_provider=='anthropic' }}>Anthropic (Claude)</option>
+                <option value="gemini" {{ 'selected' if settings.llm_provider=='gemini' }}>Google (Gemini)</option>
+                <option value="openai_compatible" {{ 'selected' if settings.llm_provider=='openai_compatible' }}>{{ t('setup.provider_other') }}</option>
+              </select></div>
+            <div class="field"><label>{{ t('setup.model') }}</label>
+              <input type="text" name="llm_model" id="llm_model" value="{{ settings.llm_model }}" placeholder="e.g. gpt-5.6-terra / claude-sonnet-5"></div>
+            <div class="field" id="baseurl-field" style="display:none"><label>{{ t('setup.baseurl') }}</label>
+              <input type="text" name="llm_base_url" id="llm_base_url" value="{{ settings.llm_base_url }}" placeholder="https://…/v1"></div>
+            <div class="field"><label>{{ t('setup.apikey') }} {% if settings.llm_api_key_set %}<span class="quality">{{ t('setup.apikey_saved') }}</span>{% endif %}</label>
+              <input type="password" name="llm_api_key" autocomplete="off" placeholder="{{ t('setup.apikey_ph_saved') if settings.llm_api_key_set else t('setup.apikey_ph') }}">
+              {% if settings.key_storage_mode == 'keychain' %}<div class="quality">{{ t('setup.key_keychain') }}</div>
+              {% elif settings.key_storage_mode == 'env' %}<div class="quality">{{ t('setup.key_env') }}</div>
+              {% elif settings.key_storage_mode == 'plaintext' %}<div class="quality">{{ t('setup.key_plaintext') }}</div>{% endif %}</div>
+            <button type="button" class="btn btn-ghost" onclick="testLlm()">{{ t('setup.test_ai') }}</button>
+            <span id="llm-test-result" class="quality"></span>
+          </div>
+        </div>
+        <div class="adv-modal-foot">
+          <button type="submit" class="btn btn-primary">{{ t('setup.save_settings') }}</button>
+          <span class="adv-save-result quality"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MUSIC SELECTION -->
+    <div class="picker adv-modal" id="adv-modal-music" style="display:none" onclick="if(event.target===this)closeAdvModal('music')">
+      <div class="picker-box adv-modal-box">
+        <div class="adv-modal-head"><h3>{{ t('setup.adv.music') }}</h3>
+          <button type="button" class="adv-modal-x" aria-label="{{ t('setup.close') }}" onclick="closeAdvModal('music')">&times;</button></div>
+        <div class="adv-modal-body">
+          <div class="field"><label>{{ t('setup.music_folder') }}</label>
+            <div class="row-form"><input type="text" name="music_dir" id="music_dir" value="{{ settings.music_dir }}">
+              <button type="button" class="btn btn-secondary" onclick="openPicker('music_dir')">{{ t('setup.choose') }}</button></div></div>
+        </div>
+        <div class="adv-modal-foot">
+          <button type="submit" class="btn btn-primary">{{ t('setup.save_settings') }}</button>
+          <span class="adv-save-result quality"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OUTPUT FOLDER -->
+    <div class="picker adv-modal" id="adv-modal-output" style="display:none" onclick="if(event.target===this)closeAdvModal('output')">
+      <div class="picker-box adv-modal-box">
+        <div class="adv-modal-head"><h3>{{ t('setup.adv.output') }}</h3>
+          <button type="button" class="adv-modal-x" aria-label="{{ t('setup.close') }}" onclick="closeAdvModal('output')">&times;</button></div>
+        <div class="adv-modal-body">
+          <div class="field"><label>{{ t('setup.output_folder') }}</label>
+            <div class="row-form"><input type="text" name="output_dir" id="output_dir" value="{{ settings.output_dir }}">
+              <button type="button" class="btn btn-secondary" onclick="openPicker('output_dir')">{{ t('setup.choose') }}</button></div></div>
+        </div>
+        <div class="adv-modal-foot">
+          <button type="submit" class="btn btn-primary">{{ t('setup.save_settings') }}</button>
+          <span class="adv-save-result quality"></span>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- ITINERARY FILE (own upload form) -->
+  <div class="picker adv-modal" id="adv-modal-itinerary" style="display:none" onclick="if(event.target===this)closeAdvModal('itinerary')">
+    <div class="picker-box adv-modal-box">
+      <div class="adv-modal-head"><h3>{{ t('setup.wiz.itinerary_adv') }}</h3>
+        <button type="button" class="adv-modal-x" aria-label="{{ t('setup.close') }}" onclick="closeAdvModal('itinerary')">&times;</button></div>
+      <div class="adv-modal-body">
+        <p class="hint">{{ t('setup.itinerary_hint_pre') }}<code>DD/MM/YYYY | day summary | places | region</code>{{ t('setup.itinerary_hint_post') }}</p>
+        <form id="itinerary-form" onsubmit="return uploadItinerary(event)">
+          <div class="row-form">
+            <input type="file" id="itinerary-file" name="file" accept=".txt" required class="file-native" onchange="showChosenFiles(this)">
+            <label for="itinerary-file" class="btn btn-secondary file-btn">{{ t('setup.choose_file') }}</label>
+            <span class="file-chosen" data-empty="{{ t('setup.no_file_chosen') }}">{{ t('setup.no_file_chosen') }}</span>
+            <button type="submit" class="btn btn-primary">{{ t('setup.upload_itinerary') }}</button></div></form>
+      </div>
+    </div>
+  </div>
+
+  <!-- START OVER -->
+  <div class="picker adv-modal" id="adv-modal-reset" style="display:none" onclick="if(event.target===this)closeAdvModal('reset')">
+    <div class="picker-box adv-modal-box">
+      <div class="adv-modal-head"><h3>{{ t('setup.start_over') }}</h3>
+        <button type="button" class="adv-modal-x" aria-label="{{ t('setup.close') }}" onclick="closeAdvModal('reset')">&times;</button></div>
+      <div class="adv-modal-body">
+        <p class="hint">{{ t('setup.start_over_hint_pre') }}<code>data/archive/</code>{{ t('setup.start_over_hint_post') }}</p>
+      </div>
+      <div class="adv-modal-foot">
+        <button type="button" class="btn btn-ghost" onclick="newTrip()">{{ t('setup.new_trip') }}</button>
+      </div>
+    </div>
+  </div>
+</details>
+</div>
+
+<!-- FOLDER PICKER -->
+<div id="picker" class="picker" style="display:none">
+  <div class="picker-box">
+    <div class="picker-path" id="picker-path"></div>
+    <div class="picker-list" id="picker-list"></div>
+    <div class="picker-actions">
+      <button class="btn btn-secondary" onclick="closePicker()">{{ t('setup.cancel') }}</button>
+      <button class="btn btn-primary" id="picker-use" onclick="usePickerFolder()">{{ t('setup.use_folder') }}</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+const DEFAULT_START = {{ default_start | tojson }};
+const PRESETS = {
+  keepsake: { video_style: 'keepsake', motion_style: 'fade',      photo_duration_seconds: '4'   },
+  modern:   { video_style: 'minimal',  motion_style: 'static',    photo_duration_seconds: '3.5' },
+  lively:   { video_style: 'espresso', motion_style: 'ken_burns', photo_duration_seconds: '2.5' },
+};
+
+function goStep(n) {
+  document.querySelectorAll('.wstep').forEach(s => s.classList.toggle('active', +s.dataset.step === n));
+  history.replaceState(null, '', '#step-' + n);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ---- step 1: choose + scan folder + folder-content preview ----
+// Import date filter. Prefill precedence: itinerary dates (if uploaded) win over
+// the scan-detected range; either way the inputs stay editable, and the reset
+// link restores the itinerary dates after a manual edit.
+let itineraryRange = null;  // {start, end} once an itinerary is uploaded
+function applyDates(r) {
+  const ds = document.getElementById('date_start'), de = document.getElementById('date_end');
+  if (ds) ds.value = (r && r.start) || '';
+  if (de) de.value = (r && r.end) || '';
+  const note = document.getElementById('date-itin-note');
+  if (note) note.style.display = itineraryRange ? 'block' : 'none';
+}
+function resetDatesToItinerary() { if (itineraryRange) applyDates(itineraryRange); }
+function chooseTripFolder() { openPicker('import_folder'); }
+
+// ---- drag-and-drop / upload import ----
+// Files dropped or chosen (from Phone Link, Explorer, a download, anywhere) are
+// uploaded to the server, which saves them into the project's media store and
+// returns a folder path. From there the normal folder flow takes over
+// (scanFolder -> date prefill -> Start import). See docs/specs/drag-and-drop-import.md.
+const UPLOAD_MAX_FILES = 2000, UPLOAD_MAX_BYTES = 5 * 1024 * 1024 * 1024;  // Phase-1 soft cap
+const MEDIA_RE = /\.(jpe?g|png|mp4|mov|avi)$/i;
+(function initDrop() {
+  const dz = document.getElementById('upload-drop');
+  if (!dz) return;
+  const hi = () => { dz.style.borderColor = '#C0392B'; dz.style.background = 'rgba(192,57,43,.05)'; };
+  const lo = () => { dz.style.borderColor = '#c9bfae'; dz.style.background = ''; };
+  ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); hi(); }));
+  ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); lo(); }));
+  dz.addEventListener('drop', async e => {
+    const dropped = await collectDropped(e.dataTransfer);
+    if (dropped.length) uploadChosen(dropped, true);
+  });
+  // Swallow drags/drops that land ANYWHERE else on the page. Without this, a
+  // near-miss outside the drop zone hits the browser's default file-drop
+  // behavior and opens each photo in a new tab.
+  ['dragover', 'drop'].forEach(ev => window.addEventListener(ev, e => {
+    if (!(e.target.closest && e.target.closest('#upload-drop'))) e.preventDefault();
+  }));
+})();
+// Recurse dropped folders via the entries API (Chromium/Edge); fall back to a
+// flat file list. Returns [{file, path}].
+async function collectDropped(dt) {
+  const entries = [...(dt.items || [])].map(it => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
+  if (!entries.length) return [...(dt.files || [])].map(f => ({ file: f, path: f.name }));
+  const out = [];
+  async function walk(entry, prefix) {
+    if (entry.isFile) {
+      await new Promise(res => entry.file(f => { out.push({ file: f, path: prefix + entry.name }); res(); }, res));
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      await new Promise(res => {
+        const readBatch = () => reader.readEntries(async es => {
+          if (!es.length) return res();
+          for (const en of es) await walk(en, prefix + entry.name + '/');
+          readBatch();
+        }, res);
+        readBatch();
+      });
+    }
+  }
+  for (const en of entries) await walk(en, '');
+  return out;
+}
+function uploadChosen(input, fromDrop) {
+  let list = fromDrop ? input : [...input].map(f => ({ file: f, path: f.webkitRelativePath || f.name }));
+  list = list.filter(x => MEDIA_RE.test(x.path));
+  if (!list.length) { alert(t('setup.js.no_media')); return; }
+  if (list.length > UPLOAD_MAX_FILES || list.reduce((a, x) => a + x.file.size, 0) > UPLOAD_MAX_BYTES) {
+    alert(t('setup.wiz.too_many')); return;
+  }
+  const fd = new FormData();
+  list.forEach(x => { fd.append('files', x.file, x.file.name); fd.append('paths', x.path); });
+  const wrap = document.getElementById('upload-progress'), bar = document.getElementById('upload-bar'), msg = document.getElementById('upload-msg');
+  wrap.style.display = 'block'; bar.style.width = '0%'; msg.textContent = tf('setup.wiz.uploading', { n: list.length });
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/setup/upload-media');
+  xhr.upload.onprogress = e => { if (e.lengthComputable) bar.style.width = Math.round(e.loaded / e.total * 100) + '%'; };
+  xhr.onload = () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      const d = JSON.parse(xhr.responseText);
+      bar.style.width = '100%'; wrap.style.display = 'none'; msg.textContent = '';
+      document.getElementById('import_folder').value = d.path;
+      scanFolder(d.path);  // hand off to the normal folder flow (counts, dates, continue)
+    } else {
+      let detail = xhr.status; try { detail = JSON.parse(xhr.responseText).detail; } catch (_) {}
+      msg.textContent = tf('setup.js.failed', { detail });
+    }
+  };
+  xhr.onerror = () => { msg.textContent = tf('setup.js.failed', { detail: 'network' }); };
+  xhr.send(fd);
+}
+async function scanFolder(path) {
+  const excl = document.getElementById('exclude').value;
+  document.getElementById('dropzone').style.display = 'none';
+  document.getElementById('scan-result').style.display = 'none';
+  document.getElementById('scan-loading').style.display = 'block';
+  try {
+    const res = await fetch('/setup/scan?path=' + encodeURIComponent(path) + '&exclude=' + encodeURIComponent(excl));
+    const d = await res.json();
+    document.getElementById('scan-loading').style.display = 'none';
+    if (!res.ok) { alert(tf('setup.js.failed', { detail: d.detail })); document.getElementById('dropzone').style.display = ''; return; }
+    document.getElementById('import_folder').value = path;
+    document.getElementById('scan-name').textContent = d.name;
+    document.getElementById('scan-dates').textContent = fmtRange(d.date_start, d.date_end);
+    document.getElementById('scan-counts').textContent = tf('setup.wiz.found', { photos: d.photos, clips: d.clips });
+    // Prefill the date filter: itinerary range wins, else the scan-detected range.
+    applyDates(itineraryRange || { start: d.date_start, end: d.date_end });
+    document.getElementById('date-range').style.display = (d.photos + d.clips) ? 'block' : 'none';
+    document.getElementById('scan-result').style.display = 'block';
+    document.getElementById('s1-continue').disabled = (d.photos + d.clips === 0);
+    renderImportFolderLine();
+    loadThumbs(path);
+  } catch (e) {
+    document.getElementById('scan-loading').style.display = 'none';
+    document.getElementById('dropzone').style.display = '';
+    alert(tf('setup.js.failed', { detail: e }));
+  }
+}
+async function loadThumbs(path) {
+  try {
+    const d = await (await fetch('/setup/thumbs?path=' + encodeURIComponent(path) + '&n=5')).json();
+    const urls = (d.thumbs || []).map(p => '/setup/thumb?path=' + encodeURIComponent(p));
+    // polaroid stack in step 1
+    const stack = document.getElementById('thumb-stack');
+    stack.innerHTML = '';
+    const rot = [-6, 5, -3, 7, -8];
+    urls.slice(0, 5).forEach((u, i) => {
+      const f = document.createElement('div'); f.className = 'polaroid';
+      f.style.setProperty('--r', rot[i % rot.length] + 'deg');
+      const img = document.createElement('img'); img.loading = 'lazy'; img.src = u; f.appendChild(img);
+      stack.appendChild(f);
+    });
+    // film-mood previews in step 3
+    ['keepsake', 'modern', 'lively'].forEach((k, i) => {
+      const el = document.getElementById('mood-photo-' + k);
+      if (el && urls[i % urls.length]) { el.src = urls[i % urls.length]; el.style.visibility = 'visible'; }
+    });
+  } catch (_) {}
+}
+function fmtRange(s, e) {
+  if (!s) return '';
+  const loc = document.documentElement.lang || 'en';
+  const d1 = new Date(s + 'T00:00:00'), d2 = new Date((e || s) + 'T00:00:00');
+  const opt = { day: 'numeric', month: 'long', year: 'numeric' };
+  try {
+    if (!e || s === e) return new Intl.DateTimeFormat(loc, opt).format(d1);
+    if (Intl.DateTimeFormat.prototype.formatRange) return new Intl.DateTimeFormat(loc, opt).formatRange(d1, d2);
+  } catch (_) {}
+  return s + ' – ' + (e || s);
+}
+function renderImportFolderLine() {
+  const f = document.getElementById('import_folder').value;
+  const name = document.getElementById('scan-name').textContent;
+  document.getElementById('import-folder-line').textContent = name ? (name + '  ·  ' + f) : f;
+}
+
+// ---- step 3: mood presets ----
+document.querySelectorAll('.mood-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.mood-card').forEach(c => { c.classList.remove('sel'); c.setAttribute('aria-checked', 'false'); });
+    card.classList.add('sel'); card.setAttribute('aria-checked', 'true');
+    const p = card.dataset.preset; document.getElementById('mood_preset').value = p;
+    const v = PRESETS[p];
+    document.querySelector(`#mood-form input[name=video_style][value="${v.video_style}"]`).checked = true;
+    document.querySelector(`#mood-form input[name=motion_style][value="${v.motion_style}"]`).checked = true;
+    document.querySelector('#mood-form input[name=photo_duration_seconds]').value = v.photo_duration_seconds;
+  });
+});
+function markCustom() {
+  document.getElementById('mood_preset').value = 'custom';
+  document.querySelectorAll('.mood-card').forEach(c => { c.classList.remove('sel'); c.setAttribute('aria-checked', 'false'); });
+}
+document.getElementById('mood-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  await fetch('/setup/settings', { method: 'POST', body: new FormData(e.target) });
+  goStep(4);
+});
+
+// ---- people ----
+function enrollTips(d) {
+  // Photo-specific fixes, most actionable first.
+  const tips = [];
+  if (d.undetected && d.undetected.length)
+    tips.push(tf('setup.enroll.fix_undetected', { names: d.undetected.join(', ') }));
+  if (d.weak && d.weak.length)
+    tips.push(tf('setup.enroll.fix_outliers', { names: d.weak.join(', ') }));
+  return tips;
+}
+async function addPerson(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = t('setup.js.looking_faces');
+  const res = await fetch('/setup/people', { method: 'POST', body: new FormData(e.target) });
+  const d = await res.json();
+  btn.disabled = false; btn.textContent = t('setup.add_person');
+  if (!res.ok) { alert(d.detail); return false; }          // no face found at all
+  const pct = (d.median == null) ? null : Math.round(d.median * 100);
+
+  if (d.accepted === false) {                              // photos disagree -> not saved
+    let msg = tf('setup.enroll.rejected', { person: d.person, pct: pct });
+    const tips = enrollTips(d);
+    tips.push(t('setup.enroll.fix_more'));
+    msg += "\n\n" + t('setup.enroll.fix_intro') + "\n• " + tips.join("\n• ");
+    alert(msg);
+    return false;                                          // keep the form; user re-picks
+  }
+
+  let msg = tf('setup.js.added', { person: d.person, found: d.found, total: d.total });
+  msg += "\n" + (pct == null ? t('setup.enroll.single_hint')
+                             : tf('setup.enroll.quality',
+                                  { pct: pct, label: pct >= 45 ? t('setup.enroll.strong')
+                                                               : t('setup.enroll.ok') }));
+  const missed = d.total - d.found;
+  if (missed > 0) msg += "\n\n" + tf('setup.js.missed', { missed: missed });
+  const tips = enrollTips(d);
+  if (tips.length) msg += "\n\n" + t('setup.enroll.improve_intro') + "\n• " + tips.join("\n• ");
+  alert(msg); location.hash = '#step-2'; location.reload(); return false;
+}
+async function deletePerson(label) {
+  if (!confirm(tf('setup.js.remove_confirm', { label: label }))) return;
+  await fetch('/setup/people/' + encodeURIComponent(label) + '/delete', { method: 'POST' });
+  location.hash = '#step-2'; location.reload();
+}
+async function renamePerson(btn) {
+  const item = btn.closest('.person-card'), oldName = item.dataset.old;
+  const newName = item.querySelector('.person-rename').value.trim();
+  if (!newName || newName === oldName) return;
+  const res = await fetch('/setup/people/' + encodeURIComponent(oldName) + '/rename', { method: 'POST', body: new URLSearchParams({ new_name: newName }) });
+  if (!res.ok) { const d = await res.json(); alert(d.detail); return; }
+  location.hash = '#step-2'; location.reload();
+}
+
+// ---- advanced settings ----
+function providerChanged() { document.getElementById('baseurl-field').style.display = (document.getElementById('llm_provider').value === 'openai_compatible') ? 'block' : 'none'; }
+function autoToggle() {
+  const on = document.getElementById('auto_place_id').checked;
+  document.getElementById('llm-fields').style.display = on ? 'block' : 'none';
+  document.getElementById('place-toggle-label').textContent = on ? t('setup.wiz.place_on') : t('setup.wiz.place_off');
+}
+async function saveAdvanced(e) {
+  e.preventDefault();
+  const body = new FormData(e.target);
+  body.set('auto_place_id', document.getElementById('auto_place_id').checked ? 'true' : 'false');
+  const res = await fetch('/setup/settings', { method: 'POST', body });
+  // All settings modals share one form, so update every result span.
+  document.querySelectorAll('.adv-save-result').forEach(el => { el.textContent = res.ok ? t('setup.js.saved') : t('setup.js.save_failed'); });
+  return false;
+}
+// Advanced settings modals: each button opens a window with only its own group.
+function openAdvModal(key) { const m = document.getElementById('adv-modal-' + key); if (m) m.style.display = 'flex'; }
+function closeAdvModal(key) { const m = document.getElementById('adv-modal-' + key); if (m) m.style.display = 'none'; }
+function closeAllAdvModals() { document.querySelectorAll('.adv-modal').forEach(m => { m.style.display = 'none'; }); }
+// Collapse the Advanced panel (and any open modal) when navigating via the kebab
+// menu or wizard steps, so it never lingers open across sections.
+function collapseAdvanced() { const p = document.getElementById('adv-panel'); if (p) p.open = false; closeAllAdvModals(); }
+window.addEventListener('hashchange', collapseAdvanced);
+document.getElementById('ah-menu')?.addEventListener('click', (e) => { if (e.target.closest('a')) collapseAdvanced(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllAdvModals(); });
+async function testLlm() {
+  const el = document.getElementById('llm-test-result'); el.textContent = t('setup.js.testing');
+  const d = await (await fetch('/setup/test-llm', { method: 'POST' })).json();
+  el.textContent = (d.ok ? '✓ ' : '✗ ') + d.message;
+}
+
+// ---- music ----
+// Mirror a hidden file input's selection into its localized span (the native
+// "N files"/"No file chosen" text can't be translated). Works for any
+// .file-native input paired with a .file-chosen span in the same .row-form.
+function showChosenFiles(input) {
+  const span = (input.closest('.row-form') || document).querySelector('.file-chosen');
+  if (!span) return;
+  const files = [...(input.files || [])];
+  span.textContent = files.length ? files.map(f => f.name).join(', ') : span.dataset.empty;
+}
+async function uploadMusic(e) {
+  e.preventDefault();
+  const res = await fetch('/setup/music', { method: 'POST', body: new FormData(e.target) });
+  if (!res.ok) { const d = await res.json(); alert(d.detail); return false; }
+  location.hash = '#step-4'; location.reload(); return false;
+}
+async function deleteMusic(name) {
+  if (!confirm(tf('setup.js.remove_confirm', { label: name }))) return;
+  await fetch('/setup/music/' + encodeURIComponent(name) + '/delete', { method: 'POST' });
+  location.hash = '#step-4'; location.reload();
+}
+async function moveMusic(name, dir) {
+  const names = [...document.querySelectorAll('#music-list .music-row')].map(r => r.dataset.name);
+  const i = names.indexOf(name), j = i + dir;
+  if (i < 0 || j < 0 || j >= names.length) return;
+  names.splice(i, 1); names.splice(j, 0, name);
+  const body = new URLSearchParams(); names.forEach(n => body.append('order', n));
+  await fetch('/setup/music/order', { method: 'POST', body });
+  location.hash = '#step-4'; location.reload();
+}
+
+// ---- itinerary ----
+async function uploadItinerary(e) {
+  e.preventDefault();
+  const res = await fetch('/setup/itinerary', { method: 'POST', body: new FormData(e.target) });
+  const d = await res.json();
+  if (res.ok && d.date_start) {
+    // The itinerary's date span now drives (and overrides) the import date filter.
+    itineraryRange = { start: d.date_start, end: d.date_end };
+    if (document.getElementById('date-range').style.display !== 'none') applyDates(itineraryRange);
+  }
+  alert(res.ok ? tf('setup.js.seeded', { days: d.days }) : tf('setup.js.failed', { detail: d.detail }));
+  return false;
+}
+
+// ---- folder picker ----
+let pickerTarget = null, pickerPath = null;
+function openPicker(targetId) { pickerTarget = targetId; loadDir(document.getElementById(targetId).value || DEFAULT_START); document.getElementById('picker').style.display = 'flex'; }
+function closePicker() { document.getElementById('picker').style.display = 'none'; }
+const COMPUTER_ROOT = '::computer';
+function pickerRow(text) { const el = document.createElement('div'); el.className = 'picker-item'; el.textContent = text; return el; }
+async function loadDir(path) {
+  const d = await (await fetch('/setup/browse?path=' + encodeURIComponent(path || ''))).json();
+  pickerPath = d.path;
+  const atComputer = d.path === COMPUTER_ROOT;
+  document.getElementById('picker-path').textContent = d.label || d.path;
+  const list = document.getElementById('picker-list'); list.innerHTML = '';
+  // Up one level (a drive root steps up to the drive list).
+  if (d.parent) { const up = pickerRow('⬑ ' + t('setup.js.up')); up.onclick = () => loadDir(d.parent); list.appendChild(up); }
+  // Jump straight to the list of drives / connected devices, unless already there.
+  if (!atComputer) { const pc = pickerRow('🖥 ' + t('setup.js.this_pc')); pc.onclick = () => loadDir(COMPUTER_ROOT); list.appendChild(pc); }
+  // Children: drives at "This PC", otherwise sub-folders. Navigate by the entry's
+  // own absolute path (server-provided) so drives and folders work the same way.
+  d.dirs.forEach(entry => { const row = pickerRow((atComputer ? '💽 ' : '📁 ') + entry.name); row.onclick = () => loadDir(entry.path); list.appendChild(row); });
+  // "This PC" itself isn't a folder you can import - only real folders are selectable.
+  const useBtn = document.getElementById('picker-use'); if (useBtn) useBtn.disabled = atComputer;
+}
+function usePickerFolder() {
+  if (pickerPath === COMPUTER_ROOT) return;  // pick a real folder, not the whole PC
+  if (pickerTarget && pickerPath) {
+    document.getElementById(pickerTarget).value = pickerPath;
+    if (pickerTarget === 'import_folder') { closePicker(); scanFolder(pickerPath); return; }
+  }
+  closePicker();
+}
+
+// ---- import + progress phases ----
+let pollTimer = null;
+function setPhase(key, state) { const li = document.querySelector(`.phases li[data-phase="${key}"]`); if (li) { li.classList.remove('active', 'done'); if (state) li.classList.add(state); } }
+function phasesFor(s) {
+  const grouping = /group|moment/i.test(s.message || '');
+  const reading = s.state === 'running' && !grouping;
+  if (s.state === 'done') { ['read', 'people', 'group', 'draft'].forEach(k => setPhase(k, 'done')); return; }
+  setPhase('read', reading ? 'active' : 'done');
+  setPhase('people', reading ? 'active' : 'done');
+  setPhase('group', grouping ? 'active' : (reading ? '' : 'done'));
+  setPhase('draft', grouping ? 'active' : '');
+}
+async function startImport() {
+  const folder = document.getElementById('import_folder').value.trim();
+  if (!folder) { alert(t('setup.js.choose_folder_first')); goStep(1); return; }
+  const body = new URLSearchParams({
+    folder,
+    gap_threshold_minutes: document.getElementById('gap').value,
+    exclude: document.getElementById('exclude').value,
+    date_start: document.getElementById('date_start').value,
+    date_end: document.getElementById('date_end').value,
+  });
+  const res = await fetch('/setup/import', { method: 'POST', body });
+  if (!res.ok) { const d = await res.json(); alert(tf('setup.js.failed', { detail: d.detail })); return; }
+  document.getElementById('import-btn').disabled = true;
+  document.getElementById('import-progress').style.display = 'block';
+  poll();
+}
+async function poll() {
+  const s = await (await fetch('/setup/import/status')).json();
+  const bar = document.getElementById('progress-bar');
+  const pct = s.total ? Math.round((s.processed / s.total) * 100) : (s.state === 'running' ? 5 : 0);
+  bar.style.width = pct + '%';
+  document.getElementById('progress-msg').textContent = s.message + (s.total ? '  (' + s.processed + '/' + s.total + ')' : '');
+  phasesFor(s);
+  if (s.state === 'running') { pollTimer = setTimeout(poll, 1200); return; }
+  if (s.state === 'done') {
+    bar.style.width = '100%';
+    let summary = s.total ? tf('setup.wiz.finish_count', { n: s.total }) : t('setup.wiz.finish_sub');
+    if (s.date_filtered) {
+      if (s.skipped_out_of_range) summary += ' ' + tf('setup.wiz.finish_skipped', { n: s.skipped_out_of_range });
+      if (s.included_undated) summary += ' ' + tf('setup.wiz.finish_undated', { n: s.included_undated });
+    }
+    document.getElementById('finish-summary').textContent = summary;
+    goStep(6);
+  } else if (s.state === 'error') {
+    document.getElementById('progress-msg').textContent = tf('setup.js.error', { message: s.message });
+    document.getElementById('import-btn').disabled = false;
+  }
+}
+async function newTrip() {
+  if (!confirm(t('setup.js.new_trip_confirm'))) return;
+  const res = await fetch('/setup/new-trip', { method: 'POST' });
+  const d = await res.json();
+  alert(res.ok ? tf('setup.js.archived_to', { path: d.archived_to }) : tf('setup.js.failed', { detail: d.detail }));
+  location.reload();
+}
+
+// ---- init ----
+providerChanged();
+// menu links to /setup#step-N only change the hash when already on Setup - honour it
+window.addEventListener('hashchange', () => {
+  const m = location.hash.match(/^#step-(\d)$/);
+  if (m) goStep(+m[1]);
+});
+const startAt = (location.hash.match(/^#step-(\d)$/) || [])[1];
+goStep(startAt ? +startAt : 1);
+if ({{ import_status.state | tojson }} === 'running') {
+  goStep(5);
+  document.getElementById('import-btn').disabled = true;
+  document.getElementById('import-progress').style.display = 'block';
+  poll();
+}
+</script>
+{% endblock %}
