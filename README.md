@@ -12,6 +12,36 @@ See `git log --oneline` for the authoritative change log.
 All visual decisions (app **and** video) are
 governed by `DESIGN.md` — read it before any UI/aesthetic change.
 
+## System requirements
+
+The packaged app targets **Windows** and needs no separate runtime — no Python,
+no ffmpeg, no model download, no admin rights, no internet to run.
+
+| | Minimum | Comfortable |
+|---|---|---|
+| **OS** | Windows 10 (1809+), 64-bit | Windows 11, 64-bit |
+| **CPU** | Any x64 processor | Multi-core (final renders use all cores) |
+| **RAM** | 4 GB (single-process draft renders only) | 8 GB+ (smooth 1080p final renders) |
+| **Disk** | ~2 GB for the app folder, **plus** room for imported media and output | 10 GB+ free on a writable drive |
+| **GPU** | Not required (rendering is CPU-based) | — |
+
+Notes:
+
+- **64-bit only.** The build is x64; it does **not** run on 32-bit Windows, and
+  on ARM Windows it works only through x64 emulation.
+- **Keep the folder somewhere writable** — Desktop or Documents, **not**
+  `Program Files`. All user data (`data\catalog.db`, `settings.json`, projects,
+  music, output, reference photos) is written next to the exe.
+- **Rendering scales down, not up.** Low-memory machines can still finish films
+  via the single-process render mode on the Preview page; more RAM and cores just
+  make the final 1080p encode faster.
+- **First launch may show a SmartScreen warning.** The exe is unsigned, so
+  Windows may ask you to confirm ("More info → Run anyway") the first time.
+  Code-signing would remove this but needs a certificate.
+- **Running from source** instead of the packaged app additionally needs
+  **Python 3** and the packages in `requirements.txt` (see below); it is not
+  Windows-only, though the packaged build and tray launcher are.
+
 ## Two ways to run it
 
 ### A. Packaged app (for anyone — no Python, no setup)
