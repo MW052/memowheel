@@ -46,6 +46,10 @@ Notes:
 
 ### A. Packaged app (for anyone — no Python, no setup)
 
+**⬇️ [Download the latest Windows build](https://github.com/MW052/memowheel/releases/latest)** —
+grab `TripVideo.zip`, unzip somewhere writable, and double-click `TripVideo.exe`.
+(A `.sha256` file is attached so you can verify the download.)
+
 A one-folder Windows build produced with PyInstaller. The recipient unzips
 `TripVideo` somewhere writable (Desktop, Documents — **not** `Program Files`)
 and double-clicks **`TripVideo.exe`**. It runs **windowless** with a
