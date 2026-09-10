@@ -22,7 +22,7 @@ no ffmpeg, no model download, no admin rights, no internet to run.
 | **OS** | Windows 10 (1809+), 64-bit | Windows 11, 64-bit |
 | **CPU** | Any x64 processor | Multi-core (final renders use all cores) |
 | **RAM** | 4 GB (single-process draft renders only) | 8 GB+ (smooth 1080p final renders) |
-| **Disk** | ~2 GB for the app folder, **plus** room for imported media and output | 10 GB+ free on a writable drive |
+| **Disk** | ~430 MB for the app folder, **plus** room for imported media and output | 10 GB+ free on a writable drive |
 | **GPU** | Not required (rendering is CPU-based) | — |
 
 Notes:

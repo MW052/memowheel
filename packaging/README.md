@@ -52,8 +52,8 @@ exe**, so keep the folder somewhere writable (Desktop, Documents - not
 - **No face-model download:** the YuNet + SFace ONNX models are bundled in-repo
   under `models/faces/` and picked up by the spec, so the first enroll works fully
   offline (the YuNet + SFace models are bundled, so there is no first-run download).
-- **Size:** the folder will be large (roughly 1-2 GB) because of OpenCV and
-  friends. A one-file build is possible but slower to start and often flakier
-  with native deps; one-folder is recommended.
+- **Size:** the unzipped folder is roughly 430 MB (OpenCV and friends dominate);
+  zipped for distribution it's about 195 MB. A one-file build is possible but
+  slower to start and often flakier with native deps; one-folder is recommended.
 - **Antivirus / SmartScreen:** unsigned PyInstaller exes can trigger warnings.
   Code-signing removes this but needs a certificate.
