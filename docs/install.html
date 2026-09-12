@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installation Guide — Memowheel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --terra: #C25B4A;
+    --terra-dark: #A8452F;
+    --indigo: #3E5C76;
+    --paper: #FBF7F0;
+    --card: #FEFCF8;
+    --line: #EDE6DA;
+    --line-2: #D8CEC0;
+    --muted: #7A716A;
+    --ink: #2B2724;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Assistant", "Segoe UI", Arial, sans-serif;
+    font-size: 19px;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 22px 80px; }
+
+  header { text-align: center; margin: 18px 0 34px; }
+  .brand { color: var(--muted); font-weight: 600; letter-spacing: .5px; font-size: 15px; }
+  h1 {
+    font-family: "Frank Ruhl Libre", Georgia, serif;
+    font-weight: 700;
+    font-size: 38px;
+    line-height: 1.2;
+    margin: 6px 0 10px;
+  }
+  .sub { color: var(--muted); font-size: 18px; margin: 0; }
+
+  .note {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin: 0 0 30px;
+  }
+  .note b { color: var(--indigo); }
+
+  .step {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 22px 20px;
+    margin: 0 0 18px;
+    position: relative;
+  }
+  .step h2 {
+    font-family: "Frank Ruhl Libre", Georgia, serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    padding-inline-start: 52px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+  .num {
+    position: absolute;
+    inset-inline-start: 22px;
+    top: 22px;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--terra);
+    color: #fff;
+    font-family: "Frank Ruhl Libre", serif;
+    font-weight: 700;
+    font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step p { margin: 8px 0; }
+  .step ul { margin: 8px 0; padding-inline-start: 22px; }
+  .step li { margin: 5px 0; }
+
+  .key {
+    display: inline-block;
+    background: var(--paper);
+    border: 1px solid var(--line-2);
+    border-radius: 7px;
+    padding: 1px 9px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  a { color: var(--terra-dark); font-weight: 600; }
+
+  .btn-row { text-align: center; margin: 10px 0 4px; }
+  .btn {
+    display: inline-block;
+    background: var(--terra);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 20px;
+    padding: 14px 30px;
+    border-radius: 12px;
+  }
+  .btn small { display: block; font-weight: 400; font-size: 14px; opacity: .92; margin-top: 2px; }
+
+  .warn {
+    border-inline-start: 5px solid var(--terra);
+    background: #fcf3ef;
+  }
+  .tip { color: var(--muted); font-size: 16px; }
+
+  .faq { margin-top: 40px; }
+  .faq h2 {
+    font-family: "Frank Ruhl Libre", serif;
+    font-size: 28px;
+    border-bottom: 2px solid var(--line-2);
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+  }
+  .faq h3 { font-size: 20px; margin: 22px 0 4px; color: var(--indigo); }
+  .faq p { margin: 4px 0; }
+
+  footer { text-align: center; color: var(--muted); font-size: 15px; margin-top: 46px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">Memowheel · Trip Video</div>
+    <h1>How to install the app</h1>
+    <p class="sub">A short, simple guide — from download to the first screen. No technical knowledge needed.</p>
+  </header>
+
+  <div class="note">
+    <b>What you need:</b> a <b>Windows 10 or 11</b> computer (64-bit). That's it.
+    Nothing to install, no account, and nothing is sent to the internet. The whole
+    thing takes a few minutes — mostly the download.
+  </div>
+
+  <div class="step">
+    <div class="num">1</div>
+    <h2>Download the app</h2>
+    <p>Click the button. A single file called <span class="key">TripVideo.zip</span>
+       will download (about 195 MB — depending on your connection this can take a
+       minute or two).</p>
+    <div class="btn-row">
+      <a class="btn" href="https://github.com/MW052/memowheel/releases/latest">
+        Download Memowheel
+        <small>Pick TripVideo.zip from the list of files</small>
+      </a>
+    </div>
+    <p class="tip">The file usually lands in your <b>Downloads</b> folder.</p>
+  </div>
+
+  <div class="step">
+    <div class="num">2</div>
+    <h2>Unzip the folder</h2>
+    <p>The ZIP file is like a closed suitcase — you open it once:</p>
+    <ul>
+      <li>Right-click the <span class="key">TripVideo.zip</span> file.</li>
+      <li>Choose <b>"Extract All…"</b>, then <b>"Extract"</b>.</li>
+    </ul>
+    <p>A folder called <span class="key">TripVideo</span> appears, with all the
+       app's files inside it.</p>
+    <p class="tip">Move the folder somewhere handy and permanent — your
+       <b>Desktop</b> or <b>Documents</b>, for example. Don't put it inside
+       <span class="key">Program Files</span>: the app saves all your work there and
+       needs a place it's allowed to write to.</p>
+  </div>
+
+  <div class="step">
+    <div class="num">3</div>
+    <h2>Open it with a double-click</h2>
+    <p>Go into the <span class="key">TripVideo</span> folder and find
+       <span class="key">TripVideo.exe</span> (it may just show as
+       <span class="key">TripVideo</span> with a colorful icon).
+       <b>Double-click it.</b></p>
+    <p class="tip">The first launch can take a few seconds — that's normal.</p>
+  </div>
+
+  <div class="step warn">
+    <div class="num">4</div>
+    <h2>If Windows shows a blue warning</h2>
+    <p>The first time, you might see a blue box saying
+       <b>"Windows protected your PC"</b>. This happens for any new app that didn't
+       come from a store — it is not an error and there's nothing wrong with the file.</p>
+    <ul>
+      <li>Click the small <b>"More info"</b> link.</li>
+      <li>A <b>"Run anyway"</b> button appears — click it.</li>
+    </ul>
+    <p>That's it — this only happens the first time.</p>
+  </div>
+
+  <div class="step">
+    <div class="num">5</div>
+    <h2>The app opens</h2>
+    <p>No ordinary window opens. Instead:</p>
+    <ul>
+      <li>A <b>small icon appears next to the clock</b> in the corner of your screen
+          (the system tray). Clicking it gives you: <b>Open</b> / <b>View log</b> /
+          <b>Quit</b>.</li>
+      <li><b>Your browser opens automatically</b> on the app's setup screen. This is
+          where you start building your trip video.</li>
+    </ul>
+    <p class="tip">Everything runs on your computer only — it just looks like a
+       website, but no one on the internet can reach it.</p>
+    <p>From here, follow the <b>User Guide</b> (the "User Guide - English" file in the
+       same folder).</p>
+  </div>
+
+  <div class="faq">
+    <h2>Common questions</h2>
+
+    <h3>My antivirus blocks it or complains — what do I do?</h3>
+    <p>Some security tools are cautious about brand-new apps. You can choose "Allow"
+       or "Trust". Want to be sure the file wasn't changed? See "How do I check the
+       download is genuine?" below.</p>
+
+    <h3>Where do all my photos and the video get saved?</h3>
+    <p>Everything is saved <b>inside the <span class="key">TripVideo</span> folder</b>,
+       next to the file you clicked. That's why it's best to keep the folder whole and
+       in a permanent place, and not delete it.</p>
+
+    <h3>How do I update to a new version?</h3>
+    <p>Download again from the same link, unzip, and run the new version. Don't delete
+       the old folder until you've copied out any work you want to keep.</p>
+
+    <h3>How do I uninstall the app?</h3>
+    <p>Just delete the <span class="key">TripVideo</span> folder. There's no
+       "uninstall" — the app installs nothing into your system.</p>
+
+    <h3>How do I check the download is genuine? (optional)</h3>
+    <p>Next to the download there's a small file called
+       <span class="key">TripVideo.zip.sha256</span>. For advanced users, it lets you
+       confirm the file you downloaded is exactly the original. Most people can simply
+       ignore it.</p>
+  </div>
+
+  <footer>
+    Memowheel — Trip Video · Runs entirely on your computer, with no account and no photo uploads.
+  </footer>
+
+</div>
+</body>
+</html>

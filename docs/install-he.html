@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מדריך התקנה — Memowheel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --terra: #C25B4A;
+    --terra-dark: #A8452F;
+    --indigo: #3E5C76;
+    --paper: #FBF7F0;
+    --card: #FEFCF8;
+    --line: #EDE6DA;
+    --line-2: #D8CEC0;
+    --muted: #7A716A;
+    --ink: #2B2724;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Assistant", "Segoe UI", "Arial Hebrew", Arial, sans-serif;
+    font-size: 19px;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 22px 80px; }
+
+  header { text-align: center; margin: 18px 0 34px; }
+  .brand { color: var(--muted); font-weight: 600; letter-spacing: .5px; font-size: 15px; }
+  h1 {
+    font-family: "Frank Ruhl Libre", "David Libre", Georgia, serif;
+    font-weight: 700;
+    font-size: 38px;
+    line-height: 1.2;
+    margin: 6px 0 10px;
+  }
+  .sub { color: var(--muted); font-size: 18px; margin: 0; }
+
+  .note {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin: 0 0 30px;
+  }
+  .note b { color: var(--indigo); }
+
+  .step {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 22px 20px;
+    margin: 0 0 18px;
+    position: relative;
+  }
+  .step h2 {
+    font-family: "Frank Ruhl Libre", "David Libre", Georgia, serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    padding-inline-start: 52px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+  .num {
+    position: absolute;
+    inset-inline-start: 22px;
+    top: 22px;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--terra);
+    color: #fff;
+    font-family: "Frank Ruhl Libre", serif;
+    font-weight: 700;
+    font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step p { margin: 8px 0; }
+  .step ul { margin: 8px 0; padding-inline-start: 22px; }
+  .step li { margin: 5px 0; }
+
+  .key {
+    display: inline-block;
+    background: var(--paper);
+    border: 1px solid var(--line-2);
+    border-radius: 7px;
+    padding: 1px 9px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  a { color: var(--terra-dark); font-weight: 600; }
+
+  .btn-row { text-align: center; margin: 10px 0 4px; }
+  .btn {
+    display: inline-block;
+    background: var(--terra);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 20px;
+    padding: 14px 30px;
+    border-radius: 12px;
+  }
+  .btn small { display: block; font-weight: 400; font-size: 14px; opacity: .92; margin-top: 2px; }
+
+  .warn {
+    border-inline-start: 5px solid var(--terra);
+    background: #fcf3ef;
+  }
+  .tip { color: var(--muted); font-size: 16px; }
+
+  .faq { margin-top: 40px; }
+  .faq h2 {
+    font-family: "Frank Ruhl Libre", serif;
+    font-size: 28px;
+    border-bottom: 2px solid var(--line-2);
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+  }
+  .faq h3 { font-size: 20px; margin: 22px 0 4px; color: var(--indigo); }
+  .faq p { margin: 4px 0; }
+
+  footer { text-align: center; color: var(--muted); font-size: 15px; margin-top: 46px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">Memowheel · וידאו טיול</div>
+    <h1>איך מתקינים את האפליקציה</h1>
+    <p class="sub">מדריך קצר ופשוט — מההורדה ועד המסך הראשון. אין צורך בידע טכני.</p>
+  </header>
+
+  <div class="note">
+    <b>מה צריך?</b> מחשב <b>Windows 10 או 11</b> (64-bit). זהו. אין צורך להתקין
+    Python, אין צורך בחשבון, ושום דבר לא נשלח לאינטרנט. כל התהליך לוקח כמה דקות,
+    רובן הורדה.
+  </div>
+
+  <div class="step">
+    <div class="num">1</div>
+    <h2>מורידים את האפליקציה</h2>
+    <p>לוחצים על הכפתור. יירד קובץ אחד בשם <span class="key">TripVideo.zip</span>
+       (בערך 195 מגה-בייט — תלוי במהירות האינטרנט, זה עשוי לקחת דקה-שתיים).</p>
+    <div class="btn-row">
+      <a class="btn" href="https://github.com/MW052/memowheel/releases/latest">
+        הורדת Memowheel
+        <small>בחרו בקובץ TripVideo.zip שברשימת הקבצים</small>
+      </a>
+    </div>
+    <p class="tip">הקובץ יישמר בדרך כלל בתיקיית <b>ההורדות</b> (Downloads) של המחשב.</p>
+  </div>
+
+  <div class="step">
+    <div class="num">2</div>
+    <h2>מחלצים את התיקייה</h2>
+    <p>קובץ ה-ZIP הוא כמו מזוודה סגורה — צריך לפתוח אותה פעם אחת:</p>
+    <ul>
+      <li>לוחצים על הקובץ <span class="key">TripVideo.zip</span> בלחיצה ימנית.</li>
+      <li>בוחרים <b>«חלץ הכול…»</b> (Extract All), ואז <b>«חלץ»</b> (Extract).</li>
+    </ul>
+    <p>תיווצר תיקייה בשם <span class="key">TripVideo</span> ובתוכה כל קבצי האפליקציה.</p>
+    <p class="tip">כדאי להעביר את התיקייה למקום נוח וקבוע — למשל <b>שולחן העבודה</b>
+       או תיקיית <b>המסמכים</b>. אל תשימו אותה בתוך <span class="key">Program Files</span>:
+       האפליקציה שומרת שם את כל העבודה שלכם, וצריך מקום עם הרשאת כתיבה.</p>
+  </div>
+
+  <div class="step">
+    <div class="num">3</div>
+    <h2>מפעילים בלחיצה כפולה</h2>
+    <p>נכנסים לתוך התיקייה <span class="key">TripVideo</span> ומוצאים את הקובץ
+       <span class="key">TripVideo.exe</span> (לפעמים יופיע פשוט בשם
+       <span class="key">TripVideo</span> עם סמל צבעוני). <b>לוחצים עליו לחיצה כפולה.</b></p>
+    <p class="tip">בפעם הראשונה ההפעלה עשויה לקחת כמה שניות — זה תקין.</p>
+  </div>
+
+  <div class="step warn">
+    <div class="num">4</div>
+    <h2>אם Windows מציג אזהרה כחולה</h2>
+    <p>בפעם הראשונה ייתכן שיופיע חלון כחול שכותב
+       <b>«Windows protected your PC»</b>. זה קורה לכל אפליקציה חדשה שלא נרכשה מחנות
+       — זו אינה תקלה ואין בעיה בקובץ.</p>
+    <ul>
+      <li>לוחצים על הקישור הקטן <b>«More info»</b> (מידע נוסף).</li>
+      <li>מופיע כפתור <b>«Run anyway»</b> (הפעל בכל זאת) — לוחצים עליו.</li>
+    </ul>
+    <p>זהו — זה קורה רק בפעם הראשונה.</p>
+  </div>
+
+  <div class="step">
+    <div class="num">5</div>
+    <h2>האפליקציה נפתחת</h2>
+    <p>לא ייפתח חלון רגיל. במקום זאת:</p>
+    <ul>
+      <li>יופיע <b>סמל קטן ליד השעון</b> בפינת המסך (מגש המערכת). לחיצה עליו נותנת:
+          <b>פתיחה</b> / <b>צפייה ביומן</b> / <b>יציאה</b>.</li>
+      <li><b>הדפדפן שלכם ייפתח אוטומטית</b> במסך ההגדרה של האפליקציה. כאן מתחילים
+          לבנות את סרטון הטיול.</li>
+    </ul>
+    <p class="tip">הכול רץ על המחשב שלכם בלבד — זה פשוט נראה כמו אתר, אבל אף אחד
+       באינטרנט לא יכול לגשת אליו.</p>
+    <p>מכאן ממשיכים לפי <b>מדריך השימוש</b> (הקובץ «User Guide - Hebrew» שנמצא
+       באותה תיקייה).</p>
+  </div>
+
+  <div class="faq">
+    <h2>שאלות נפוצות</h2>
+
+    <h3>האנטי-וירוס חוסם או מתלונן — מה עושים?</h3>
+    <p>חלק מתוכנות האבטחה זהירות עם אפליקציות חדשות. אפשר לבחור «אפשר» / «סמוך»
+       (Allow / Trust). רוצים ודאות שהקובץ לא שונה? ראו «איך לוודא שההורדה תקינה»
+       בהמשך.</p>
+
+    <h3>איפה נשמרים כל התמונות והסרטון שלי?</h3>
+    <p>הכול נשמר <b>בתוך תיקיית <span class="key">TripVideo</span></b>, ליד הקובץ
+       שלחצתם עליו. לכן כדאי לשמור את התיקייה שלמה ובמקום קבוע, ולא למחוק אותה.</p>
+
+    <h3>איך מעדכנים לגרסה חדשה?</h3>
+    <p>מורידים מחדש מאותו קישור, מחלצים, ומפעילים את הגרסה החדשה. אל תמחקו את
+       התיקייה הישנה לפני שהעתקתם ממנה את העבודה שאתם רוצים לשמור.</p>
+
+    <h3>איך מסירים את האפליקציה?</h3>
+    <p>פשוט מוחקים את תיקיית <span class="key">TripVideo</span>. אין «הסרת התקנה» —
+       האפליקציה לא מתקינה דבר בתוך המערכת.</p>
+
+    <h3>איך לוודא שההורדה תקינה? (לא חובה)</h3>
+    <p>לצד הקובץ יש קובץ קטן בשם <span class="key">TripVideo.zip.sha256</span>.
+       למתקדמים: הוא מאפשר לבדוק שהקובץ שהורדתם זהה בדיוק למקור. רוב המשתמשים
+       יכולים פשוט להתעלם ממנו.</p>
+  </div>
+
+  <footer>
+    Memowheel — וידאו טיול · רץ במלואו על המחשב שלכם, בלי חשבון ובלי העלאת תמונות.
+  </footer>
+
+</div>
+</body>
+</html>

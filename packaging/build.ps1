@@ -16,19 +16,23 @@ py -m PyInstaller --noconfirm packaging\trip_video.spec
 
 $appDir = "dist\TripVideo"
 if (Test-Path $appDir) {
-    # Ship the user guides next to the exe (visible, double-clickable), so the
-    # zip a recipient unpacks already contains the manual - self-contained HTML,
-    # no server needed. Renamed to friendly, obvious filenames.
-    Write-Host "Bundling the user guide next to the app..."
-    Copy-Item "docs\manual.html"    (Join-Path $appDir "User Guide - English.html") -Force
-    Copy-Item "docs\manual-he.html" (Join-Path $appDir "User Guide - Hebrew.html")  -Force
+    # Ship the guides next to the exe (visible, double-clickable), so the
+    # zip a recipient unpacks already contains them - self-contained HTML,
+    # no server needed. Renamed to friendly, obvious filenames. The install
+    # guides cover the pre-app steps (download/unzip/first-launch/SmartScreen);
+    # the user guides pick up from there.
+    Write-Host "Bundling the install + user guides next to the app..."
+    Copy-Item "docs\install.html"    (Join-Path $appDir "Installation Guide - English.html") -Force
+    Copy-Item "docs\install-he.html" (Join-Path $appDir "Installation Guide - Hebrew.html")  -Force
+    Copy-Item "docs\manual.html"     (Join-Path $appDir "User Guide - English.html") -Force
+    Copy-Item "docs\manual-he.html"  (Join-Path $appDir "User Guide - Hebrew.html")  -Force
 }
 
 $exe = "dist\TripVideo\TripVideo.exe"
 if (Test-Path $exe) {
     Write-Host ""
     Write-Host "Done. The app is: $exe"
-    Write-Host "The user guide ships alongside it (User Guide - English.html / - Hebrew.html)."
+    Write-Host "The install + user guides ship alongside it (Installation Guide / User Guide - English.html / - Hebrew.html)."
     Write-Host "Zip the whole 'dist\TripVideo' folder and share it. The recipient"
     Write-Host "double-clicks TripVideo.exe - no Python or install needed."
 } else {
