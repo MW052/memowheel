@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://mw052.github.io/memowheel/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://mw052.github.io/memowheel/"/>
+    <xhtml:link rel="alternate" hreflang="he" href="https://mw052.github.io/memowheel/index-he.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://mw052.github.io/memowheel/"/>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://mw052.github.io/memowheel/index-he.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://mw052.github.io/memowheel/"/>
+    <xhtml:link rel="alternate" hreflang="he" href="https://mw052.github.io/memowheel/index-he.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://mw052.github.io/memowheel/"/>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://mw052.github.io/memowheel/install.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://mw052.github.io/memowheel/install.html"/>
+    <xhtml:link rel="alternate" hreflang="he" href="https://mw052.github.io/memowheel/install-he.html"/>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://mw052.github.io/memowheel/install-he.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://mw052.github.io/memowheel/install.html"/>
+    <xhtml:link rel="alternate" hreflang="he" href="https://mw052.github.io/memowheel/install-he.html"/>
+    <priority>0.7</priority>
+  </url>
+</urlset>

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /specs/
+
+Sitemap: https://mw052.github.io/memowheel/sitemap.xml

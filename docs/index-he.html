@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memowheel — וידאו טיול: הפכו את תמונות הטיול לסרט מזכרת</title>
+<meta name="description" content="Memowheel וידאו טיול היא אפליקציה חינמית ל‑Windows שהופכת את התמונות והסרטונים מהטיול לסרט מזכרת — מקובצים לפי מקום ויום, עם כותרות, כיתובים ומוזיקה. רץ במלואו על המחשב שלכם: בלי חשבון ובלי העלאות.">
+<link rel="canonical" href="https://mw052.github.io/memowheel/index-he.html">
+<link rel="alternate" hreflang="en" href="https://mw052.github.io/memowheel/">
+<link rel="alternate" hreflang="he" href="https://mw052.github.io/memowheel/index-he.html">
+<link rel="alternate" hreflang="x-default" href="https://mw052.github.io/memowheel/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Memowheel">
+<meta property="og:title" content="Memowheel — וידאו טיול: הפכו את תמונות הטיול לסרט מזכרת">
+<meta property="og:description" content="אפליקציה חינמית ל‑Windows שהופכת את התמונות והסרטונים מהטיול לסרט מזכרת. רץ במלואו על המחשב שלכם — בלי חשבון ובלי העלאות.">
+<meta property="og:url" content="https://mw052.github.io/memowheel/index-he.html">
+<meta property="og:locale" content="he">
+<meta property="og:locale:alternate" content="en">
+<meta property="og:image" content="https://mw052.github.io/memowheel/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://mw052.github.io/memowheel/og-image.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --terra:#C25B4A; --terra-dark:#A8452F; --indigo:#3E5C76;
+    --paper:#FBF7F0; --card:#FEFCF8; --line:#EDE6DA; --line-2:#D8CEC0;
+    --muted:#7A716A; --ink:#2B2724;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Assistant","Segoe UI","Arial Hebrew",Arial,sans-serif; font-size:18px; line-height:1.75; }
+  a { color:var(--terra-dark); font-weight:600; }
+  .wrap { max-width:900px; margin:0 auto; padding:0 22px; }
+
+  .topbar { display:flex; justify-content:space-between; align-items:center; padding:16px 0; font-size:15px; }
+  .topbar .brand { color:var(--muted); font-weight:700; letter-spacing:.5px; }
+  .lang a { text-decoration:none; }
+
+  .hero { text-align:center; padding:34px 0 20px; }
+  .kicker { color:var(--terra); font-weight:700; letter-spacing:1px; font-size:15px; }
+  h1 { font-family:"Frank Ruhl Libre","David Libre",Georgia,serif; font-weight:700;
+    font-size:clamp(32px,6vw,52px); line-height:1.18; margin:8px 0 12px; }
+  .lead { color:var(--muted); font-size:20px; max-width:640px; margin:0 auto 26px; }
+
+  .cta { display:inline-flex; flex-direction:column; align-items:center;
+    background:var(--terra); color:#fff; text-decoration:none; font-weight:700;
+    font-size:21px; padding:15px 34px; border-radius:13px; }
+  .cta small { font-weight:400; font-size:14px; opacity:.92; margin-top:3px; }
+  .cta-sub { margin-top:12px; font-size:15px; color:var(--muted); }
+  .cta-sub a { color:var(--indigo); }
+
+  .strip { display:flex; flex-wrap:wrap; justify-content:center; gap:10px 26px; margin:26px 0 6px; color:var(--muted); font-size:15px; }
+  .strip b { color:var(--ink); }
+
+  section { padding:34px 0; border-top:1px solid var(--line); }
+  h2 { font-family:"Frank Ruhl Libre","David Libre",Georgia,serif; font-size:28px; margin:0 0 6px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:20px; }
+  .feat { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 18px 16px; }
+  .feat h3 { margin:0 0 4px; font-size:19px; color:var(--indigo); }
+  .feat p { margin:0; color:var(--ink); font-size:16px; }
+
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:640px){ .two { grid-template-columns:1fr; } }
+  .box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; }
+  .box h3 { margin:0 0 8px; font-size:20px; }
+  ul.clean { margin:8px 0 0; padding-inline-start:20px; }
+  ul.clean li { margin:5px 0; }
+
+  .final { text-align:center; }
+  .install-cta { display:inline-block; background:var(--indigo); color:#fff; text-decoration:none;
+    font-weight:700; font-size:18px; padding:12px 26px; border-radius:12px; margin-top:6px; }
+  footer { border-top:1px solid var(--line); padding:26px 0 60px; text-align:center; color:var(--muted); font-size:14px; }
+  footer a { color:var(--indigo); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <span class="brand">Memowheel</span>
+    <span class="lang"><a href="index.html" lang="en" hreflang="en">‹ English</a></span>
+  </div>
+
+  <div class="hero">
+    <div class="kicker">וידאו טיול</div>
+    <h1>הפכו את תמונות הטיול לסרט מזכרת</h1>
+    <p class="lead">Memowheel היא אפליקציה חינמית ל‑Windows שאוספת את התמונות והסרטונים
+       הקצרים מהטיול, מקבצת אותם לפי מקום ויום, ומרכיבה סרט עם כותרות, כיתובים ומוזיקה —
+       הכול על המחשב שלכם.</p>
+    <a class="cta" href="https://github.com/MW052/memowheel/releases/latest">
+      הורדה ל‑Windows
+      <small>חינם · כ‑195 מגה · Windows 10 או 11</small>
+    </a>
+    <div class="cta-sub">חדשים כאן? קראו את <a href="install-he.html">מדריך ההתקנה שלב‑אחר‑שלב</a>.</div>
+  </div>
+
+  <div class="strip">
+    <span>🔒 <b>פרטי</b> — שום דבר לא מועלה</span>
+    <span>🧑‍🤝‍🧑 <b>בלי חשבון</b></span>
+    <span>💸 <b>חינם</b></span>
+    <span>🌐 <b>עברית + English</b></span>
+  </div>
+
+  <section>
+    <h2>מה זה עושה</h2>
+    <p>מכוונים את Memowheel לתיקייה עם תמונות וסרטונים מהטיול. האפליקציה מסדרת אותם
+       ל<b>רגעים</b> — לפי מקום ולפי יום — ופותחת דף עריכה נוח בדפדפן: שומרים את הטובות,
+       מתקנים שמות ומקומות, בוחרים מוזיקה, וקובעים כותרות. כשמרוצים — נוצר קובץ
+       <b>MP4</b> מוכן לשמירה או לשיתוף. בלי עקומת למידה ובלי ידע בעריכת וידאו.</p>
+    <div class="grid">
+      <div class="feat"><h3>קיבוץ אוטומטי</h3><p>התמונות והסרטונים מתקבצים לרגעים לפי מקום ויום, כך שהסיפור בנוי חצי‑דרך עוד לפני שהתחלתם.</p></div>
+      <div class="feat"><h3>עריכה בדפדפן</h3><p>בוחרים, מסדרים בגרירה, מתקנים מקומות ואנשים, ובוחרים פסקול — בסביבה פשוטה ורגועה.</p></div>
+      <div class="feat"><h3>כותרות וכיתובים</h3><p>כותרת פתיחה, כרטיסי‑יום וכיתובי מקום נוספים עבורכם, ונשארים ניתנים לעריכה מלאה.</p></div>
+      <div class="feat"><h3>זיהוי פנים על המכשיר</h3><p>מזהים את האנשים שחשובים לכם לאורך הטיול. הפנים מעובדים במחשב שלכם ולעולם לא מועלים.</p></div>
+      <div class="feat"><h3>מקומות מ‑GPS — לא מקוון</h3><p>תגיות ה‑GPS של התמונות הופכות לשמות מקומות בלי אינטרנט ובלי מפתח. אפשר גם להקליד ידנית.</p></div>
+      <div class="feat"><h3>דו‑לשוני מהיסוד</h3><p>האפליקציה והסרט הסופי עובדים גם בעברית (מימין לשמאל) וגם באנגלית.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="two">
+      <div class="box">
+        <h3>התמונות נשארות שלכם</h3>
+        <p>Memowheel רץ במלואו על המחשב שלכם.</p>
+        <ul class="clean">
+          <li>בלי חשבון, בלי הרשמה, בלי שום דבר להתחבר אליו.</li>
+          <li>זיהוי הפנים מתבצע במחשב שלכם — הפנים לעולם לא מועלים.</li>
+          <li>הדבר היחיד שאי‑פעם עוזב את המחשב הוא תמונה שאתם <em>מאשרים במפורש</em>
+              לזיהוי מקום אוטומטי (עם מפתח ה‑API שלכם). אפשר לוותר על זה לגמרי ולהקליד
+              מקומות בעצמכם.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>מה צריך</h3>
+        <ul class="clean">
+          <li><b>Windows 10 או 11</b>, 64‑bit.</li>
+          <li>כ‑<b>430 מגה</b> מקום לאפליקציה, ועוד מקום למדיה שלכם.</li>
+          <li><b>4 ג׳יגה זיכרון</b> לכל הפחות; 8 ומעלה לעיבוד 1080p חלק.</li>
+          <li>בלי Python, בלי ffmpeg, בלי מתקין — פשוט מחלצים ולוחצים פעמיים.</li>
+        </ul>
+        <p style="margin:12px 0 0"><a href="install-he.html">מדריך ההתקנה המלא ›</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2>מוכנים ליצור את שלכם?</h2>
+    <p class="lead" style="margin:10px auto 22px">מורידים את האפליקציה, ואז עוקבים אחרי
+       מדריך ההתקנה הקצר. תוך דקות תערכו את הטיול הראשון שלכם.</p>
+    <div><a class="install-cta" href="install-he.html">📖 למדריך ההתקנה בעברית</a></div>
+    <div class="cta-sub" style="margin-top:16px">
+      <a href="https://github.com/MW052/memowheel/releases/latest">הורדה ל‑Windows</a> ·
+      <a href="index.html" lang="en">English version</a>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Memowheel — וידאו טיול</b> · מחולל סרטוני מזכרת מקומי ופרטי.<br>
+    <a href="index-he.html" lang="he">עברית</a> · <a href="index.html" lang="en">English</a> ·
+    <a href="install-he.html">מדריך התקנה</a> ·
+    <a href="https://github.com/MW052/memowheel">הקוד ב‑GitHub</a></p>
+    <p>קוד פתוח (MIT) · מאת Michael Weiss</p>
+  </footer>
+
+</div>
+</body>
+</html>

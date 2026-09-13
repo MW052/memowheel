@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memowheel — Trip Video: turn trip photos into a keepsake movie</title>
+<meta name="description" content="Memowheel Trip Video is a free Windows app that turns your trip's photos and clips into a keepsake movie — grouped by place and day, with title cards, captions, and music. Runs entirely on your own computer: no account, no uploads.">
+<link rel="canonical" href="https://mw052.github.io/memowheel/">
+<link rel="alternate" hreflang="en" href="https://mw052.github.io/memowheel/">
+<link rel="alternate" hreflang="he" href="https://mw052.github.io/memowheel/index-he.html">
+<link rel="alternate" hreflang="x-default" href="https://mw052.github.io/memowheel/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Memowheel">
+<meta property="og:title" content="Memowheel — Trip Video: turn trip photos into a keepsake movie">
+<meta property="og:description" content="A free Windows app that turns your trip's photos and clips into a keepsake movie. Runs entirely on your own computer — no account, no uploads.">
+<meta property="og:url" content="https://mw052.github.io/memowheel/">
+<meta property="og:locale" content="en">
+<meta property="og:locale:alternate" content="he">
+<meta property="og:image" content="https://mw052.github.io/memowheel/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Memowheel — Trip Video">
+<meta name="twitter:description" content="Turn your trip's photos and clips into a keepsake movie, entirely on your own computer.">
+<meta name="twitter:image" content="https://mw052.github.io/memowheel/og-image.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Memowheel — Trip Video",
+  "operatingSystem": "Windows 10, Windows 11",
+  "applicationCategory": "MultimediaApplication",
+  "description": "A free Windows app that turns a trip's photos and short clips into a keepsake video, grouped by place and day, with title cards, place captions, and music. Runs entirely on your own computer with no account and no uploads. Bilingual English and Hebrew.",
+  "url": "https://mw052.github.io/memowheel/",
+  "downloadUrl": "https://github.com/MW052/memowheel/releases/latest",
+  "softwareVersion": "1.0.0",
+  "inLanguage": ["en", "he"],
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Michael Weiss" }
+}
+</script>
+<style>
+  :root {
+    --terra:#C25B4A; --terra-dark:#A8452F; --indigo:#3E5C76;
+    --paper:#FBF7F0; --card:#FEFCF8; --line:#EDE6DA; --line-2:#D8CEC0;
+    --muted:#7A716A; --ink:#2B2724;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Assistant","Segoe UI",Arial,sans-serif; font-size:18px; line-height:1.7; }
+  a { color:var(--terra-dark); font-weight:600; }
+  .wrap { max-width:900px; margin:0 auto; padding:0 22px; }
+
+  .topbar { display:flex; justify-content:space-between; align-items:center;
+    padding:16px 0; font-size:15px; }
+  .topbar .brand { color:var(--muted); font-weight:700; letter-spacing:.5px; }
+  .lang a { text-decoration:none; }
+
+  .hero { text-align:center; padding:34px 0 20px; }
+  .kicker { color:var(--terra); font-weight:700; letter-spacing:1px; font-size:15px; }
+  h1 { font-family:"Frank Ruhl Libre",Georgia,serif; font-weight:700;
+    font-size:clamp(34px,6vw,54px); line-height:1.12; margin:8px 0 12px; }
+  .lead { color:var(--muted); font-size:20px; max-width:620px; margin:0 auto 26px; }
+
+  .cta { display:inline-flex; flex-direction:column; align-items:center;
+    background:var(--terra); color:#fff; text-decoration:none; font-weight:700;
+    font-size:21px; padding:15px 34px; border-radius:13px; }
+  .cta small { font-weight:400; font-size:14px; opacity:.92; margin-top:3px; }
+  .cta-sub { margin-top:12px; font-size:15px; color:var(--muted); }
+  .cta-sub a { color:var(--indigo); }
+
+  .strip { display:flex; flex-wrap:wrap; justify-content:center; gap:10px 26px;
+    margin:26px 0 6px; color:var(--muted); font-size:15px; }
+  .strip b { color:var(--ink); }
+
+  section { padding:34px 0; border-top:1px solid var(--line); }
+  h2 { font-family:"Frank Ruhl Libre",Georgia,serif; font-size:28px; margin:0 0 6px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:16px; margin-top:20px; }
+  .feat { background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:18px 18px 16px; }
+  .feat h3 { margin:0 0 4px; font-size:19px; color:var(--indigo); }
+  .feat p { margin:0; color:var(--ink); font-size:16px; }
+
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:640px){ .two { grid-template-columns:1fr; } }
+  .box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; }
+  .box h3 { margin:0 0 8px; font-size:20px; }
+  ul.clean { margin:8px 0 0; padding-inline-start:20px; }
+  ul.clean li { margin:5px 0; }
+
+  .final { text-align:center; }
+  footer { border-top:1px solid var(--line); padding:26px 0 60px; text-align:center;
+    color:var(--muted); font-size:14px; }
+  footer a { color:var(--indigo); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <span class="brand">Memowheel</span>
+    <span class="lang"><a href="index-he.html" lang="he" hreflang="he">עברית ›</a></span>
+  </div>
+
+  <div class="hero">
+    <div class="kicker">TRIP VIDEO</div>
+    <h1>Turn your trip's photos into a keepsake movie</h1>
+    <p class="lead">Memowheel is a free Windows app that gathers a trip's photos and
+       short clips, groups them by place and day, and renders a movie with title
+       cards, captions, and music — all on your own computer.</p>
+    <a class="cta" href="https://github.com/MW052/memowheel/releases/latest">
+      Download for Windows
+      <small>Free · about 195 MB · Windows 10 or 11</small>
+    </a>
+    <div class="cta-sub">New here? Read the <a href="install.html">step-by-step install guide</a>.</div>
+  </div>
+
+  <div class="strip">
+    <span>🔒 <b>Private</b> — nothing uploaded</span>
+    <span>🧑‍🤝‍🧑 <b>No account</b></span>
+    <span>💸 <b>Free</b></span>
+    <span>🌐 <b>English + עברית</b></span>
+  </div>
+
+  <section>
+    <h2>What it does</h2>
+    <p>Point Memowheel at a folder of trip photos and clips. It sorts them into
+       <b>moments</b> — by place and by day — and opens a friendly review page in your
+       browser where you keep the good ones, fix names and places, choose music, and
+       set title cards. When you're happy, it renders a finished <b>MP4</b> you can keep
+       or share. There's no learning curve and no editing skills required.</p>
+    <div class="grid">
+      <div class="feat"><h3>Grouped automatically</h3><p>Photos and clips are clustered into moments by place and day, so the story is half-built before you start.</p></div>
+      <div class="feat"><h3>Review in your browser</h3><p>Curate, reorder with drag-and-drop, correct places and people, and pick a soundtrack — all in a calm, simple workspace.</p></div>
+      <div class="feat"><h3>Title cards &amp; captions</h3><p>An opening title, per-day cards, and place captions are added for you, and stay fully editable.</p></div>
+      <div class="feat"><h3>On-device face recognition</h3><p>Recognize the people you care about across the trip. Faces are processed on your machine and never uploaded.</p></div>
+      <div class="feat"><h3>Places from GPS — offline</h3><p>Photo GPS tags become place names without any internet or API. You can also type places by hand.</p></div>
+      <div class="feat"><h3>Bilingual by design</h3><p>The app and the finished video work in both Hebrew (right-to-left) and English.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="two">
+      <div class="box">
+        <h3>Your photos stay yours</h3>
+        <p>Memowheel runs entirely on your own computer.</p>
+        <ul class="clean">
+          <li>No account, no sign-up, nothing to log into.</li>
+          <li>Face recognition happens on your machine — faces are never uploaded.</li>
+          <li>The only thing that ever leaves your computer is a photo you
+              <em>explicitly</em> approve for optional AI place-naming (using your own
+              API key). You can skip that entirely and type places yourself.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>What you need</h3>
+        <ul class="clean">
+          <li><b>Windows 10 or 11</b>, 64-bit.</li>
+          <li>About <b>430 MB</b> of disk for the app, plus room for your media.</li>
+          <li><b>4 GB RAM</b> minimum; 8 GB+ for smooth 1080p renders.</li>
+          <li>No Python, no ffmpeg, no installer — just unzip and double-click.</li>
+        </ul>
+        <p style="margin:12px 0 0"><a href="install.html">Full install guide ›</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2>Ready to make yours?</h2>
+    <p class="lead" style="margin:10px auto 22px">Download the app, then follow the
+       short install guide. You'll be reviewing your first trip in minutes.</p>
+    <a class="cta" href="https://github.com/MW052/memowheel/releases/latest">
+      Download for Windows
+      <small>Free · about 195 MB · Windows 10 or 11</small>
+    </a>
+    <div class="cta-sub"><a href="install.html">Install guide (English)</a> · <a href="index-he.html" lang="he">גרסה בעברית</a></div>
+  </section>
+
+  <footer>
+    <p><b>Memowheel — Trip Video</b> · A local, private keepsake-video maker.<br>
+    <a href="index.html">English</a> · <a href="index-he.html" lang="he">עברית</a> ·
+    <a href="install.html">Install guide</a> ·
+    <a href="https://github.com/MW052/memowheel">Source on GitHub</a></p>
+    <p>Open-source (MIT) · by Michael Weiss</p>
+  </footer>
+
+</div>
+</body>
+</html>
