@@ -113,8 +113,8 @@ def cmd_ingest(folder: str, exclude_dirs: set[str] | None = None,
     finally:
         conn.close()
     if not enrolled:
-        print("At least one person must be enrolled first (run 'enroll'). Currently enrolled: none")
-        sys.exit(1)
+        print("No people enrolled - importing without face recognition "
+              "(run 'enroll' first if you want faces tagged).")
     counts = run_ingest(folder, enrolled, exclude_dirs=exclude_dirs,
                         date_start=date_start, date_end=date_end, places=places)
     if counts and (date_start or date_end):

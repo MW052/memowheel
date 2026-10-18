@@ -438,9 +438,10 @@ def start_import(
             raise HTTPException(status_code=400, detail="Select at least one place.")
     place_filtered = selected_places is not None
 
+    # Enrolling people is optional (Step 2 offers "Skip for now"): import runs
+    # fine with nobody enrolled - the pipeline skips the face model entirely and
+    # simply tags no faces. Do NOT block import here.
     enrolled = load_enrolled(conn)
-    if not enrolled:
-        raise HTTPException(status_code=400, detail="Enroll at least one person first.")
 
     # No location lookup during import (it's on-demand per photo in review now), so
     # import needs no API key or trip country - those are checked only when the user
