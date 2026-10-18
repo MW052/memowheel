@@ -148,20 +148,56 @@
     {% endif %}
 
     <form id="person-form" onsubmit="return addPerson(event)">
-      <button type="button" class="add-dashed" onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden">
+      <button type="button" class="add-dashed" id="ap-toggle" onclick="apOpen()">
         <span class="add-plus">+</span> {{ t('setup.wiz.add_another') if people else t('setup.add_person') }}
       </button>
-      <div class="add-person-fields" {% if people %}hidden{% endif %}>
-        <div class="row-form">
-          <input type="text" name="name" dir="auto" placeholder="{{ t('setup.person_ph') }}" required>
-          <input type="file" id="person-photos" name="photos" accept="image/*" multiple required class="file-native" onchange="showChosenFiles(this)">
-          <label for="person-photos" class="btn btn-secondary file-btn">{{ t('setup.choose_file') }}</label>
-          <span class="file-chosen" data-empty="{{ t('setup.no_file_chosen') }}">{{ t('setup.no_file_chosen') }}</span>
-          <button type="submit" class="btn btn-secondary">{{ t('setup.add_person') }}</button>
+
+      <div class="add-person-guided" id="ap-panel" hidden>
+        <div class="ap-progress" aria-hidden="true">
+          <span class="ap-dot" data-d="1"></span><span class="ap-dot" data-d="2"></span><span class="ap-dot" data-d="3"></span>
+          <span class="ap-steplabel" id="ap-steplabel"></span>
         </div>
-        <small>{{ t('setup.enroll_note') }}</small>
+
+        <!-- 1 of 3: name -->
+        <div class="ap-sub" data-sub="1">
+          <label class="ap-q" for="ap-name">{{ t('setup.ap.q_name') }}</label>
+          <input type="text" name="name" id="ap-name" dir="auto" placeholder="{{ t('setup.person_ph') }}"
+                 oninput="apNameInput()"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();if(!document.getElementById('ap-next1').disabled)apGoto(2);}">
+          <div class="ap-nav">
+            <button type="button" class="btn btn-ghost" onclick="apCancel()">{{ t('setup.ap.cancel') }}</button>
+            <button type="button" class="btn btn-primary" id="ap-next1" onclick="apGoto(2)" disabled>{{ t('setup.ap.next') }} &rarr;</button>
+          </div>
+        </div>
+
+        <!-- 2 of 3: photos -->
+        <div class="ap-sub" data-sub="2" hidden>
+          <label class="ap-q">{{ t('setup.ap.q_photos_pre') }} <b class="ap-name-echo"></b></label>
+          <p class="ap-help">{{ t('setup.ap.photos_help') }}</p>
+          <input type="file" id="person-photos" name="photos" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                 multiple class="file-native" onchange="apPhotosChosen(this)">
+          <label for="person-photos" class="btn btn-secondary file-btn">{{ t('setup.ap.choose_photos') }}</label>
+          <div class="ap-chosen" id="ap-chosen" data-empty="{{ t('setup.no_file_chosen') }}">{{ t('setup.no_file_chosen') }}</div>
+          <div class="ap-nav">
+            <button type="button" class="btn btn-ghost" onclick="apGoto(1)">&larr; {{ t('setup.ap.back') }}</button>
+            <button type="button" class="btn btn-primary" id="ap-next2" onclick="apGoto(3)" disabled>{{ t('setup.ap.next') }} &rarr;</button>
+          </div>
+        </div>
+
+        <!-- 3 of 3: confirm -->
+        <div class="ap-sub" data-sub="3" hidden>
+          <label class="ap-q">{{ t('setup.ap.q_confirm_pre') }} <b class="ap-name-echo"></b>?</label>
+          <p class="ap-summary" id="ap-summary"></p>
+          <div class="ap-nav">
+            <button type="button" class="btn btn-ghost" onclick="apGoto(2)">&larr; {{ t('setup.ap.back') }}</button>
+            <button type="submit" class="btn btn-primary btn-lg" id="ap-submit">{{ t('setup.ap.add') }} <b class="ap-name-echo"></b></button>
+          </div>
+        </div>
+
+        <div class="ap-result" id="ap-result" hidden></div>
       </div>
     </form>
+    {% if not people %}<script>document.addEventListener('DOMContentLoaded', apOpen);</script>{% endif %}
 
     <div class="wiz-nav">
       <button type="button" class="btn btn-secondary" onclick="goStep(1)">&larr; {{ t('setup.wiz.back') }}</button>
@@ -796,35 +832,108 @@ function enrollTips(d) {
     tips.push(tf('setup.enroll.fix_outliers', { names: d.weak.join(', ') }));
   return tips;
 }
+// ---- guided add-person (narrated name -> photos -> add) ----
+function apEsc(s) { const d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; }
+function apEl(id) { return document.getElementById(id); }
+function apOpen() {
+  apEl('ap-toggle').hidden = true;
+  apEl('ap-panel').hidden = false;
+  apReset();
+  apGoto(1);
+}
+function apReset() {
+  apEl('person-form').reset();
+  apNameInput();
+  apPhotosChosen(apEl('person-photos'));
+  apHideResult();
+}
+function apCancel() {
+  apReset();
+  apEl('ap-panel').hidden = true;
+  apEl('ap-toggle').hidden = false;
+}
+function apGoto(n) {
+  document.querySelectorAll('#ap-panel .ap-sub').forEach(s => { s.hidden = (+s.dataset.sub !== n); });
+  document.querySelectorAll('#ap-panel .ap-dot').forEach(d => { d.classList.toggle('on', +d.dataset.d <= n); });
+  apEl('ap-steplabel').textContent = tf('setup.ap.step', { n: n });
+  apHideResult();
+  if (n === 3) {
+    const name = apEl('ap-name').value.trim();
+    const cnt = (apEl('person-photos').files || []).length;
+    apEl('ap-summary').textContent = tf('setup.ap.summary', { name: name, n: cnt });
+  }
+  if (n === 1) setTimeout(() => apEl('ap-name').focus(), 0);
+}
+function apNameInput() {
+  const v = apEl('ap-name').value.trim();
+  apEl('ap-next1').disabled = !v;
+  document.querySelectorAll('#ap-panel .ap-name-echo').forEach(e => e.textContent = v);
+}
+function apPhotosChosen(input) {
+  const files = [...((input && input.files) || [])];
+  const box = apEl('ap-chosen');
+  box.textContent = files.length
+    ? tf('setup.ap.chosen', { n: files.length }) + ' ' + files.map(f => f.name).join(', ')
+    : box.dataset.empty;
+  apEl('ap-next2').disabled = !files.length;
+}
+function apShowResult(html, kind) {
+  const r = apEl('ap-result');
+  r.className = 'ap-result' + (kind ? ' ' + kind : '');
+  r.innerHTML = html;
+  r.hidden = false;
+}
+function apHideResult() { const r = apEl('ap-result'); r.hidden = true; r.innerHTML = ''; }
+function apReChooseBtn() {
+  return '<div class="ap-nav2"><button type="button" class="btn btn-secondary" onclick="apGoto(2)">'
+    + apEsc(t('setup.ap.rechoose')) + '</button></div>';
+}
+
 async function addPerson(e) {
   e.preventDefault();
-  const btn = e.target.querySelector('button[type=submit]');
-  btn.disabled = true; btn.textContent = t('setup.js.looking_faces');
-  const res = await fetch('/setup/people', { method: 'POST', body: new FormData(e.target) });
-  const d = await res.json();
-  btn.disabled = false; btn.textContent = t('setup.add_person');
-  if (!res.ok) { alert(d.detail); return false; }          // no face found at all
+  const name = apEl('ap-name').value.trim();
+  const files = (apEl('person-photos').files || []);
+  if (!name) { apGoto(1); return false; }
+  if (!files.length) { apGoto(2); return false; }
+
+  const submit = apEl('ap-submit');
+  submit.disabled = true;
+  apShowResult('<span class="ap-spin"></span>' + apEsc(t('setup.ap.working')), 'working');
+
+  let res, d;
+  try {
+    res = await fetch('/setup/people', { method: 'POST', body: new FormData(e.target) });
+    d = await res.json();
+  } catch (err) {
+    submit.disabled = false;
+    apShowResult('<b>' + apEsc(t('setup.ap.neterr')) + '</b>' + apReChooseBtn(), 'err');
+    return false;
+  }
+  submit.disabled = false;
+
+  if (!res.ok) {                                           // no face found at all
+    apShowResult('<b>' + apEsc(d.detail || t('setup.ap.neterr')) + '</b><br>'
+      + apEsc(t('setup.enroll.fix_more')) + apReChooseBtn(), 'err');
+    return false;
+  }
   const pct = (d.median == null) ? null : Math.round(d.median * 100);
 
   if (d.accepted === false) {                              // photos disagree -> not saved
-    let msg = tf('setup.enroll.rejected', { person: d.person, pct: pct });
-    const tips = enrollTips(d);
-    tips.push(t('setup.enroll.fix_more'));
-    msg += "\n\n" + t('setup.enroll.fix_intro') + "\n• " + tips.join("\n• ");
-    alert(msg);
-    return false;                                          // keep the form; user re-picks
+    const tips = enrollTips(d); tips.push(t('setup.enroll.fix_more'));
+    apShowResult('<b>' + apEsc(tf('setup.enroll.rejected', { person: d.person, pct: pct })) + '</b>'
+      + '<ul><li>' + tips.map(apEsc).join('</li><li>') + '</li></ul>' + apReChooseBtn(), 'err');
+    return false;
   }
 
-  let msg = tf('setup.js.added', { person: d.person, found: d.found, total: d.total });
-  msg += "\n" + (pct == null ? t('setup.enroll.single_hint')
-                             : tf('setup.enroll.quality',
-                                  { pct: pct, label: pct >= 45 ? t('setup.enroll.strong')
-                                                               : t('setup.enroll.ok') }));
+  // success
+  let msg = apEsc(tf('setup.js.added', { person: d.person, found: d.found, total: d.total }));
+  msg += '<br>' + apEsc(pct == null ? t('setup.enroll.single_hint')
+    : tf('setup.enroll.quality', { pct: pct, label: pct >= 45 ? t('setup.enroll.strong') : t('setup.enroll.ok') }));
   const missed = d.total - d.found;
-  if (missed > 0) msg += "\n\n" + tf('setup.js.missed', { missed: missed });
-  const tips = enrollTips(d);
-  if (tips.length) msg += "\n\n" + t('setup.enroll.improve_intro') + "\n• " + tips.join("\n• ");
-  alert(msg); location.hash = '#step-2'; location.reload(); return false;
+  if (missed > 0) msg += '<br>' + apEsc(tf('setup.js.missed', { missed: missed }));
+  apShowResult('<span class="ap-check">✓</span> ' + msg, 'ok');
+  setTimeout(() => { location.hash = '#step-2'; location.reload(); }, 1500);
+  return false;
 }
 async function deletePerson(label) {
   if (!confirm(tf('setup.js.remove_confirm', { label: label }))) return;

@@ -771,6 +771,33 @@ html[lang="he"] .scan-dates{font-family:var(--sans)}
 .add-plus{color:var(--terra);font-weight:800;font-size:18px}
 .add-person-fields{margin-top:12px}
 
+/* guided add-person (narrated: name -> photos -> add) */
+.add-person-guided{margin-top:12px;background:var(--card);border:1px solid var(--n1);
+  border-radius:var(--r-md,14px);padding:20px}
+.ap-progress{display:flex;align-items:center;gap:7px;margin-bottom:16px}
+.ap-dot{width:9px;height:9px;border-radius:50%;background:var(--n2);transition:background .2s}
+.ap-dot.on{background:var(--terra)}
+.ap-steplabel{margin-inline-start:6px;font-size:13px;color:var(--muted)}
+.ap-q{display:block;font-weight:700;font-size:17px;margin-bottom:8px;color:var(--ink)}
+.ap-q b{color:var(--terra)}
+.ap-help{color:var(--label);font-size:14px;margin:0 0 14px}
+.ap-sub #ap-name{width:100%}
+.ap-chosen{font-size:13px;color:var(--label);margin-top:12px;word-break:break-all}
+.ap-nav{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:20px}
+.ap-nav2{margin-top:12px}
+.ap-summary{font-size:15px;color:var(--ink);margin:0}
+.ap-result{margin-top:16px;padding:12px 14px;border-radius:var(--r-sm,10px);font-size:14px;line-height:1.55}
+.ap-result.working{background:#fdf4f0;color:var(--muted)}
+.ap-result.ok{background:#eef4ea;border:1px solid #cfe0c6;color:#3f5b37}
+.ap-result.err{background:#fbefe9;border:1px solid #e6c4b9;color:#8f3a2a}
+.ap-result ul{margin:8px 0 0;padding-inline-start:20px}
+.ap-result li{margin:3px 0}
+.ap-check{color:#3f8a3a;font-weight:800}
+.ap-spin{display:inline-block;width:12px;height:12px;border:2px solid var(--n1);
+  border-top-color:var(--terra);border-radius:50%;animation:apspin .7s linear infinite;
+  margin-inline-end:8px;vertical-align:middle}
+@keyframes apspin{to{transform:rotate(360deg)}}
+
 /* step 3: mood tiles (real trip photos) */
 .mood-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:8px}
 .mood-card{align-items:stretch;padding:12px}
