@@ -48,14 +48,30 @@ _detector: cv2.FaceDetectorYN | None = None
 _recognizer: cv2.FaceRecognizerSF | None = None
 
 
+def _model_buffer(relative: str) -> np.ndarray:
+    """Read a bundled ONNX model as an in-memory byte buffer.
+
+    OpenCV's path-based model loaders can't open a file whose path contains
+    non-ASCII characters on Windows - a user who unzips the app under e.g.
+    `Desktop\\טיול\\` gets "Can't read ONNX file" and face recognition fails.
+    Python's `read_bytes()` handles Unicode paths fine, so we read the bytes here
+    and hand OpenCV a buffer (via the create(framework, bufferModel, bufferConfig,
+    ...) overload), which never touches the filesystem path."""
+    return np.frombuffer(resource_path(relative).read_bytes(), dtype=np.uint8)
+
+
+_EMPTY_CFG = np.empty(0, dtype=np.uint8)  # ONNX models need no separate config
+
+
 def _get_detector() -> cv2.FaceDetectorYN:
     global _detector
     if _detector is None:
         _detector = cv2.FaceDetectorYN.create(
-            str(resource_path(_DETECTOR_MODEL)),
-            "",
+            "onnx",
+            _model_buffer(_DETECTOR_MODEL),
+            _EMPTY_CFG,
             (320, 320),  # placeholder; reset per-image via setInputSize
-            score_threshold=_DET_SCORE_THRESHOLD,
+            _DET_SCORE_THRESHOLD,
         )
     return _detector
 
@@ -64,7 +80,9 @@ def _get_recognizer() -> cv2.FaceRecognizerSF:
     global _recognizer
     if _recognizer is None:
         _recognizer = cv2.FaceRecognizerSF.create(
-            str(resource_path(_RECOGNIZER_MODEL)), ""
+            "onnx",
+            _model_buffer(_RECOGNIZER_MODEL),
+            _EMPTY_CFG,
         )
     return _recognizer
 
