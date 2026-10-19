@@ -193,9 +193,12 @@ def assess_enrollment(reference_image_paths: list[str]) -> EnrollmentQuality:
     photos = []   # user-facing, keeps name + detected + score
     for path in reference_image_paths:
         name = Path(path).name
-        img = load_corrected_bgr(path)
         entry = {"name": name, "detected": False, "score": None}
         photos.append(entry)
+        try:
+            img = load_corrected_bgr(path)
+        except Exception:  # unreadable/corrupt/unsupported file -> treat as "no face"
+            img = None
         if img is None:
             continue
         faces = _detect(img)

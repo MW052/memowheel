@@ -24,7 +24,7 @@ from PIL import Image
 # Kept in sync with ingest.pipeline (PHOTO_EXTENSIONS / CLIP_EXTENSIONS). Defined
 # locally so this module stays light - importing pipeline would pull the whole
 # decode/face/quality stack into the fast scan path.
-PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".heif"}
 CLIP_EXTENSIONS = {".mp4", ".mov", ".avi"}
 
 _DATETIME_ORIGINAL_TAG = 36867  # EXIF DateTimeOriginal

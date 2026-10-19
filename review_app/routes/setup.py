@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
 import config
+import paths
 import secret_store
 from cloud.llm import test_llm
 from db.schema import get_connection, DEFAULT_DB_PATH
@@ -34,8 +35,8 @@ import project_store
 
 router = APIRouter()
 
-REFERENCE_DIR = Path("data") / "reference"
-DATA_DIR = Path("data")
+REFERENCE_DIR = paths.data_path("reference")
+DATA_DIR = paths.data_dir()
 
 # --- import job (single-user local app: one at a time, in-memory status) ---
 _import_lock = threading.Lock()

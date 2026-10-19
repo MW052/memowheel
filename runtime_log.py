@@ -18,7 +18,9 @@ import logging.handlers
 import sys
 from pathlib import Path
 
-LOG_DIR = Path("data") / "logs"
+import paths
+
+LOG_DIR = paths.data_path("logs")
 LOG_FILE = LOG_DIR / "tripvideo.log"
 
 _MAX_BYTES = 1_000_000  # ~1 MB per file

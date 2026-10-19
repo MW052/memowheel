@@ -8,7 +8,9 @@ errors (Premise 14).
 import sqlite3
 from pathlib import Path
 
-DEFAULT_DB_PATH = Path("data") / "catalog.db"
+import paths
+
+DEFAULT_DB_PATH = paths.data_path("catalog.db")
 
 
 def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:

@@ -1,17 +1,20 @@
 """Persistent app settings (survives the New-trip archive).
 
-A flat key/value store in data/settings.json for things a user sets in the Setup
+A flat key/value store in <data>/settings.json for things a user sets in the Setup
 screen: the LLM provider/model/key and the music + output folders. Kept OUT of
 the catalog DB on purpose, so "New trip" (which archives catalog.db) doesn't wipe
-your configuration. Relative to the project root, matching the rest of the app
-(the server and manage.py both run from there).
+your configuration. Lives under the writable data dir (`paths.data_dir()`) like
+the rest of the user's data - the project root in dev, a per-user folder when
+packaged.
 """
 
 import json
 import os
 from pathlib import Path
 
-SETTINGS_PATH = Path("data") / "settings.json"
+import paths
+
+SETTINGS_PATH = paths.data_path("settings.json")
 
 DEFAULTS = {
     # Cloud place-ID is OFF by default so the app works with no API key at all
@@ -38,8 +41,8 @@ DEFAULTS = {
     # How long each photo is shown in the video, in seconds (applies to all photos).
     "photo_duration_seconds": "4",
     # Video generation paths.
-    "music_dir": str(Path("data") / "music"),
-    "output_dir": str(Path("data") / "output"),
+    "music_dir": str(paths.data_path("music")),
+    "output_dir": str(paths.data_path("output")),
     "output_basename": "trip_video",
     # Playback order of music tracks (filenames in music_dir); extras not listed
     # here are appended in filename order.

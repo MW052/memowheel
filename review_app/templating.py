@@ -7,7 +7,7 @@ routes import `templates` from here.
 from fastapi.templating import Jinja2Templates
 
 import config
-from features import APP_NAME
+from features import APP_NAME, APP_VERSION
 from paths import resource_path
 from review_app.i18n import i18n_context
 
@@ -24,7 +24,7 @@ def app_context(request) -> dict:
     else:
         basename = (config.get_setting("output_basename", "trip") or "trip").strip()
         trip_name = basename.replace("_", " ").replace("-", " ").title() or "Trip"
-    return {"app_name": APP_NAME, "trip_name": trip_name}
+    return {"app_name": APP_NAME, "app_version": APP_VERSION, "trip_name": trip_name}
 
 
 def asset_ver(filename: str) -> int:

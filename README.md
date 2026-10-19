@@ -30,8 +30,9 @@ Notes:
 - **64-bit only.** The build is x64; it does **not** run on 32-bit Windows, and
   on ARM Windows it works only through x64 emulation.
 - **Keep the folder somewhere writable** — Desktop or Documents, **not**
-  `Program Files`. All user data (`data\catalog.db`, `settings.json`, projects,
-  music, output, reference photos) is written next to the exe.
+  `Program Files`. Your trips, settings, and reference photos are stored
+  separately under `%LOCALAPPDATA%\Memowheel\data`, so they survive updates and
+  you never copy anything when upgrading.
 - **Rendering scales down, not up.** Low-memory machines can still finish films
   via the single-process render mode on the Preview page; more RAM and cores just
   make the final 1080p encode faster.
@@ -54,9 +55,12 @@ A one-folder Windows build produced with PyInstaller. The recipient unzips
 `TripVideo` somewhere writable (Desktop, Documents — **not** `Program Files`)
 and double-clicks **`TripVideo.exe`**. It runs **windowless** with a
 **system-tray icon** (Open / View log / Quit) and opens the browser at the
-setup screen. All user data (`data\catalog.db`, `settings.json`, projects,
-music, output, reference photos) is written **next to the exe** — so keep the
-whole folder together and never overwrite it wholesale on an update.
+setup screen. All user data (catalog, `settings.json`, projects, music, output,
+reference photos, logs) is written to a **per-user folder kept separate from the
+program**: `%LOCALAPPDATA%\Memowheel\data` (on Windows). Because data lives
+outside the app folder, **updating is just "quit and replace the program
+folder"** — nothing to copy. (Drop a `portable.txt` file next to the exe to keep
+everything in the app folder instead, e.g. for a USB stick.)
 
 To build it (on a Windows box that already runs the app from source):
 
@@ -217,7 +221,8 @@ generate/      MoviePy/ffmpeg video assembly (draft + parallel-final modes)
 packaging/     PyInstaller spec + build.ps1 (zero-install Windows bundle)
 features.py    home-hub maker registry (APP_NAME rebrands the whole app)
 project_store  multi-project library (per-project catalogs + shared people)
-paths.py       frozen-vs-source asset resolution; writable data/ next to the exe
+paths.py       frozen-vs-source asset resolution; per-user writable data dir
+               (%LOCALAPPDATA%/Memowheel/data when packaged, ./data in dev)
 manage.py      CLI: enroll / itinerary / ingest / serve / tray + maintenance
 ```
 

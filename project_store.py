@@ -21,15 +21,16 @@ from datetime import datetime
 from pathlib import Path
 
 import config
+import paths
 from db.schema import DEFAULT_DB_PATH, get_connection, init_db
 
 # Characters not allowed in Windows filenames; stripped when a project's name
 # becomes its video's filename.
 _FS_UNSAFE = re.compile(r'[\\/:*?"<>|]+')
 
-PROJECTS_DIR = Path("data") / "projects"
-REGISTRY_PATH = Path("data") / "projects.json"
-ARCHIVE_DIR = Path("data") / "archive"
+PROJECTS_DIR = paths.data_path("projects")
+REGISTRY_PATH = paths.data_path("projects.json")
+ARCHIVE_DIR = paths.data_path("archive")
 _PEOPLE_COLS = ["person_label", "embedding", "reference_photo_path", "created_at"]
 
 

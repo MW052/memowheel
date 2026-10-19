@@ -8,8 +8,22 @@ nav and everything else stays the same.
 APP_NAME is the hub's name - change this one string to rebrand.
 """
 
+import paths
+
 APP_NAME = "Memowheel"
 APP_TAGLINE = "Make something to remember."
+
+
+def _read_version() -> str:
+    """The app's version string, from the bundled VERSION file (single source of
+    truth, also used by the release tag). Empty if it can't be read."""
+    try:
+        return paths.resource_path("VERSION").read_text(encoding="utf-8").strip()
+    except Exception:
+        return ""
+
+
+APP_VERSION = _read_version()
 
 FEATURES = [
     {

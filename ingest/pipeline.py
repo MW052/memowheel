@@ -28,7 +28,7 @@ from ingest.clustering import (
 )
 from cloud.resolve_places import resolve_gps_items
 
-PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".heif"}
 CLIP_EXTENSIONS = {".mp4", ".mov", ".avi"}
 
 

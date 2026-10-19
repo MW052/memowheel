@@ -9,6 +9,17 @@ convention) and generate (MoviePy, RGB convention) so the fix is one place.
 import numpy as np
 from PIL import Image, ImageOps
 
+# iPhones save photos as HEIC/HEIF by default, which Pillow can't decode on its
+# own. Registering pillow-heif teaches Image.open to read .heic/.heif (and their
+# EXIF, so timestamps/GPS still work). Optional at runtime: if it isn't installed
+# (e.g. a slim dev env), JPEG/PNG still work and HEIC simply stays unreadable.
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+except Exception:  # noqa: BLE001 - never let a missing/broken plugin block import
+    pass
+
 
 def load_corrected_rgb(path: str) -> np.ndarray:
     with Image.open(path) as img:

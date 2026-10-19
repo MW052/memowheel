@@ -28,6 +28,8 @@ datas = [
     # YuNet + SFace ONNX models (ingest/faces.py resolves them via
     # paths.resource_path); shipped in-repo, no first-run download.
     (os.path.join(ROOT, "models", "faces"), "models/faces"),
+    # Version string (features.APP_VERSION reads it via paths.resource_path).
+    (os.path.join(ROOT, "VERSION"), "."),
 ]
 binaries = []
 hiddenimports = [
@@ -58,6 +60,9 @@ for pkg in [
     "cv2", "imageio_ffmpeg",
     "reverse_geocoder", "moviepy", "bidi", "openai", "fastapi", "starlette",
     "keyring", "pystray",
+    # HEIC/HEIF decode (iPhone photos): ships native libheif binaries that must
+    # be bundled, not just the Python package.
+    "pillow_heif",
 ]:
     try:
         d, b, h = collect_all(pkg)

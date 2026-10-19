@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 
 import config
+import paths
 import project_store
 from db.schema import get_connection, DEFAULT_DB_PATH
 from review_app.db import get_db
@@ -922,7 +923,7 @@ def serve_output(name: str):
     """Serve a finished video from the configured output folder so the review
     page can link to it. Basename-only (Path(name).name) to prevent path
     traversal outside the output folder."""
-    output_dir = Path(config.get_setting("output_dir", str(Path("data") / "output")))
+    output_dir = Path(config.get_setting("output_dir", str(paths.data_path("output"))))
     path = output_dir / Path(name).name
     if not path.is_file():
         raise HTTPException(status_code=404, detail="video not found")
@@ -944,7 +945,7 @@ def _latest_output() -> str | None:
     name = (proj or {}).get("video")
     if not name or "_draft_" in name:
         return None
-    output_dir = Path(config.get_setting("output_dir", str(Path("data") / "output")))
+    output_dir = Path(config.get_setting("output_dir", str(paths.data_path("output"))))
     path = output_dir / Path(name).name
     return path.name if path.is_file() else None
 
@@ -967,5 +968,5 @@ def finish_page(request: Request, conn=Depends(get_db)):
     return templates.TemplateResponse(request, "finish.html", {
         "latest": _latest_output(),
         "included_count": included,
-        "output_dir": config.get_setting("output_dir", str(Path("data") / "output")),
+        "output_dir": config.get_setting("output_dir", str(paths.data_path("output"))),
     })

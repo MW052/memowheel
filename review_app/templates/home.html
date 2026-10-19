@@ -5,6 +5,7 @@
 <p class="kicker">{{ t('app.tagline') }}</p>
 <h1>{{ app_name }}</h1>
 <p class="summary">{{ t('home.q') }}</p>
+{% if app_version %}<p class="home-version">v{{ app_version }}</p>{% endif %}
 
 <div class="feature-grid">
   {% for f in features %}

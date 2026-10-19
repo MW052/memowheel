@@ -58,9 +58,10 @@ from proglog import ProgressBarLogger
 from generate.pacing import item_duration, DEFAULT_PHOTO_DURATION
 from ingest.image_utils import load_corrected_rgb, apply_crop
 from config import get_setting, get_bool, ordered_music_files
+import paths
 
-OUTPUT_DIR = Path("data") / "output"
-MUSIC_DIR = Path("data") / "music"  # playlist folder, user-supplied, gitignored -
+OUTPUT_DIR = paths.data_path("output")
+MUSIC_DIR = paths.data_path("music")  # playlist folder, user-supplied, gitignored -
                                       # tracks play back-to-back in filename order;
                                       # prefix with numbers (01-, 02-...) to control
                                       # order if it matters

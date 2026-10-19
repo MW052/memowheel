@@ -174,7 +174,8 @@
         <div class="ap-sub" data-sub="2" hidden>
           <label class="ap-q">{{ t('setup.ap.q_photos_pre') }} <b class="ap-name-echo"></b></label>
           <p class="ap-help">{{ t('setup.ap.photos_help') }}</p>
-          <input type="file" id="person-photos" name="photos" accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+          <input type="file" id="person-photos" name="photos"
+                 accept="image/jpeg,image/png,image/heic,image/heif,.jpg,.jpeg,.png,.heic,.heif"
                  multiple class="file-native" onchange="apPhotosChosen(this)">
           <label for="person-photos" class="btn btn-secondary file-btn">{{ t('setup.ap.choose_photos') }}</label>
           <div class="ap-chosen" id="ap-chosen" data-empty="{{ t('setup.no_file_chosen') }}">{{ t('setup.no_file_chosen') }}</div>

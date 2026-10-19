@@ -40,6 +40,7 @@ window.tf = (k, vars, d) => {
         <hr>
         <a href="/logs">{{ t('nav.log') }}</a>
         <a href="/">{{ t('nav.home') }}</a>
+        {% if app_version %}<div class="ah-version">{{ app_name }} v{{ app_version }}</div>{% endif %}
       </div>
     </div>
     {% endif %}

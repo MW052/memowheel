@@ -771,6 +771,10 @@ html[lang="he"] .scan-dates{font-family:var(--sans)}
 .add-plus{color:var(--terra);font-weight:800;font-size:18px}
 .add-person-fields{margin-top:12px}
 
+/* app version (quiet): foot of the header menu, and under the hub title */
+.ah-version{padding:8px 12px 4px;color:var(--n3);font-size:12px;letter-spacing:.2px}
+.home-version{color:var(--n3);font-size:13px;margin:-4px 0 0}
+
 /* guided add-person (narrated: name -> photos -> add) */
 .add-person-guided{margin-top:12px;background:var(--card);border:1px solid var(--n1);
   border-radius:var(--r-md,14px);padding:20px}

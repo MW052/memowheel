@@ -51,6 +51,13 @@ def main() -> None:
     if getattr(sys, "frozen", False):
         os.chdir(Path(sys.executable).resolve().parent)
 
+    # Relocate any pre-relocation data/ (older builds wrote it next to the exe)
+    # into the per-user data dir, then make sure that dir exists. MUST run before
+    # anything below touches user data (logging writes under data/logs).
+    import paths
+    paths.migrate_legacy_data_if_needed()
+    paths.ensure_data_dir()
+
     from runtime_log import build_log_config, redirect_streams_to_log
     # No console here (pythonw/frozen): capture prints + tracebacks to the log.
     redirect_streams_to_log()

@@ -18,11 +18,14 @@ producing `dist\TripVideo\TripVideo.exe`. Zip the whole `dist\TripVideo` folder
 and share it; the recipient unzips and double-clicks `TripVideo.exe`. It runs
 **windowless** - no console flashes open. A system-tray icon appears (Open /
 View log / Quit) and the browser opens at the setup screen. Because there's no
-console, the server's output is written to `data\logs\tripvideo.log`, viewable
-any time from the app's kebab menu -> "View log". User data (`data\catalog.db`,
-`settings.json`, music, output, photos-references) is written **next to the
-exe**, so keep the folder somewhere writable (Desktop, Documents - not
-`Program Files`).
+console, the server's output goes to a log file (under the per-user data dir),
+viewable any time from the app's kebab menu -> "View log". User data (catalog,
+`settings.json`, music, output, reference photos, logs) is written to a
+**per-user folder kept out of the program folder**: `%LOCALAPPDATA%\Memowheel\data`.
+So the app folder is pure program files - **updating is just replacing it**, no
+data to preserve. (A `portable.txt` beside the exe forces the old behavior -
+data in `<app>\data` - for USB/no-trace use.) Still keep the app folder itself
+somewhere writable (Desktop, Documents - not `Program Files`).
 
 ## How it fits together
 
@@ -30,8 +33,11 @@ exe**, so keep the folder somewhere writable (Desktop, Documents - not
   (shared with `py manage.py tray`), which chdir's next to the exe, redirects
   stdout/stderr to the log file, serves, and shows the system-tray icon.
 - `paths.py::resource_path` - finds bundled templates/static/fonts via
-  `sys._MEIPASS` when frozen, the source tree in dev. Writable `data/` stays
-  relative to the working directory (which `app_main` sets to the app folder).
+  `sys._MEIPASS` when frozen, the source tree in dev. `paths.data_dir()` resolves
+  the writable user-data root: `%LOCALAPPDATA%\Memowheel\data` when packaged (a
+  `portable.txt` marker or dev keeps it at `./data`), and
+  `migrate_legacy_data_if_needed()` moves an older next-to-exe `data/` into it on
+  first run (called from `tray_app.main()`).
 - `packaging/trip_video.spec` - bundles the assets (including the YuNet/SFace
   face models under `models/faces/`) and `collect_all`s the heavy native packages
   (cv2, imageio-ffmpeg, moviepy, reverse_geocoder, ...).

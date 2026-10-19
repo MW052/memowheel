@@ -12,6 +12,8 @@ from pathlib import Path
 import cv2
 import reverse_geocoder
 
+import paths
+
 from ingest.selection import ClusterItem, select_cloud_id_candidate
 from ingest.image_utils import load_corrected_bgr
 from ingest.faces import blur_faces
@@ -174,7 +176,7 @@ def blur_and_send(conn, cluster_id: int) -> None:
 
     # Kept (not deleted) so you can visually confirm the blur actually
     # worked before trusting it - review these in data/blurred/.
-    blurred_dir = Path("data") / "blurred"
+    blurred_dir = paths.data_path("blurred")
     blurred_dir.mkdir(parents=True, exist_ok=True)
     blurred_path = blurred_dir / f"cluster_{cluster_id}_item_{row['id']}.jpg"
     cv2.imwrite(str(blurred_path), blurred)
@@ -214,7 +216,7 @@ def send_specific_item_for_id(conn, item_id: int) -> str:
     if face_tags:
         image = load_corrected_bgr(row["path"])
         blurred = blur_faces(image)
-        blurred_dir = Path("data") / "blurred"
+        blurred_dir = paths.data_path("blurred")
         blurred_dir.mkdir(parents=True, exist_ok=True)
         send_path = blurred_dir / f"item_{item_id}_manual_pick.jpg"
         cv2.imwrite(str(send_path), blurred)
@@ -266,7 +268,7 @@ def find_location_for_item(conn, item_id: int) -> str:
             )
         # Blur faces before sending (Premise 12) if the photo has any.
         if json.loads(row["face_tags"]):
-            blurred_dir = Path("data") / "blurred"
+            blurred_dir = paths.data_path("blurred")
             blurred_dir.mkdir(parents=True, exist_ok=True)
             send_path = blurred_dir / f"item_{item_id}_manual_pick.jpg"
             cv2.imwrite(str(send_path), blur_faces(load_corrected_bgr(row["path"])))
