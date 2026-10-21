@@ -39,6 +39,22 @@ CREATE TABLE IF NOT EXISTS enrolled_faces (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Named groups of people ("Family", "Kids"). People are shared across every
+-- project (project_store snapshots/restores the people domain on each switch),
+-- so groups are too - project_store carries these two tables alongside
+-- enrolled_faces. See people.py for the reusable groups + search layer.
+CREATE TABLE IF NOT EXISTS person_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS person_group_members (
+    group_id INTEGER NOT NULL REFERENCES person_groups(id) ON DELETE CASCADE,
+    person_label TEXT NOT NULL,          -- matches enrolled_faces.person_label / items.face_tags
+    PRIMARY KEY (group_id, person_label)
+);
+
 CREATE TABLE IF NOT EXISTS clusters (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     trip_day TEXT NOT NULL,              -- ISO date, e.g. '2026-05-12'

@@ -19,7 +19,7 @@ window.tf = (k, vars, d) => {
 <body>
 {% set path = request.url.path %}
 {% set workspace = path.startswith('/review') or path.startswith('/preview') or path.startswith('/finish') %}
-{% set has_menu = workspace or path.startswith('/setup') or path.startswith('/trip') or path.startswith('/logs') %}
+{% set has_menu = workspace or path.startswith('/setup') or path.startswith('/trip') or path.startswith('/logs') or path.startswith('/people') %}
 
 <header class="app-header {{ 'is-workspace' if workspace else 'is-minimal' }}">
   <div class="ah-left">
@@ -31,6 +31,7 @@ window.tf = (k, vars, d) => {
       <div class="ah-menu" id="ah-menu" hidden>
         <a href="/trip">{{ t('projects.switch') }}</a>
         <a href="/review">{{ t('nav.story') }}</a>
+        <a href="/people">{{ t('nav.people') }}</a>
         <div class="ah-menu-label">{{ t('nav.setup') }}</div>
         <a href="/setup#step-1">{{ t('setup.wiz.step_photos') }}</a>
         <a href="/setup#step-2">{{ t('setup.wiz.step_people') }}</a>

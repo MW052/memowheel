@@ -204,24 +204,48 @@ def _backup(src_path: Path, dst_path: Path) -> None:
         src.close()
 
 
-def _snapshot_people() -> list[tuple]:
+# The whole "people domain" is shared across projects, not just enrolled faces:
+# groups and their membership (people.py) ride along too, so a group made in one
+# trip exists in every trip. Each table is snapshotted with all its columns and
+# restored with explicit ids, so person_group_members.group_id stays valid.
+_GROUP_COLS = ["id", "name", "created_at"]
+_MEMBER_COLS = ["group_id", "person_label"]
+
+
+def _snapshot_people() -> dict[str, list[tuple]]:
     conn = get_connection(DEFAULT_DB_PATH)
     try:
-        return [tuple(r) for r in conn.execute(
-            f"SELECT {', '.join(_PEOPLE_COLS)} FROM enrolled_faces"
-        ).fetchall()]
+        return {
+            "enrolled_faces": [tuple(r) for r in conn.execute(
+                f"SELECT {', '.join(_PEOPLE_COLS)} FROM enrolled_faces")],
+            "person_groups": [tuple(r) for r in conn.execute(
+                f"SELECT {', '.join(_GROUP_COLS)} FROM person_groups")],
+            "person_group_members": [tuple(r) for r in conn.execute(
+                f"SELECT {', '.join(_MEMBER_COLS)} FROM person_group_members")],
+        }
     finally:
         conn.close()
 
 
-def _restore_people(rows: list[tuple]) -> None:
+def _restore_people(snapshot: dict[str, list[tuple]]) -> None:
     conn = get_connection(DEFAULT_DB_PATH)
     try:
+        # Delete members before groups (FK), insert groups before members.
+        conn.execute("DELETE FROM person_group_members")
+        conn.execute("DELETE FROM person_groups")
         conn.execute("DELETE FROM enrolled_faces")
-        placeholders = ", ".join(["?"] * len(_PEOPLE_COLS))
-        conn.executemany(
-            f"INSERT INTO enrolled_faces ({', '.join(_PEOPLE_COLS)}) VALUES ({placeholders})", rows
-        )
+        for table, cols in (
+            ("enrolled_faces", _PEOPLE_COLS),
+            ("person_groups", _GROUP_COLS),
+            ("person_group_members", _MEMBER_COLS),
+        ):
+            rows = snapshot.get(table, [])
+            if not rows:
+                continue
+            placeholders = ", ".join(["?"] * len(cols))
+            conn.executemany(
+                f"INSERT INTO {table} ({', '.join(cols)}) VALUES ({placeholders})", rows
+            )
         conn.commit()
     finally:
         conn.close()

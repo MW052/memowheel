@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}{{ t('people.title') }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="pg">
+  <header class="pg-head">
+    <h1>{{ t('people.title') }}</h1>
+    <p class="pg-sub">{{ t('people.subtitle') }}</p>
+  </header>
+
+  {# ---- search ---- #}
+  <section class="pg-card pg-search">
+    <h2>{{ t('people.search_heading') }}</h2>
+    <form action="/people/search" method="get" class="pg-search-form">
+      <input type="search" name="q" dir="auto" value="{{ q or '' }}" list="name-options"
+             placeholder="{{ t('people.search_ph') }}" required autofocus autocomplete="off">
+      <datalist id="name-options">
+        {% for name in name_options %}<option value="{{ name }}"></option>{% endfor %}
+      </datalist>
+      <fieldset class="pg-scope">
+        <span class="pg-scope-label">{{ t('people.scope_label') }}:</span>
+        <label><input type="radio" name="scope" value="current" checked> {{ t('people.scope_current') }}</label>
+        <label><input type="radio" name="scope" value="all"> {{ t('people.scope_all') }}</label>
+      </fieldset>
+      <button type="submit" class="btn btn-primary">{{ t('people.search_btn') }}</button>
+    </form>
+  </section>
+
+  {% if not people %}
+  <section class="pg-card">
+    <p class="pg-empty">{{ t('people.none_enrolled') }}
+      <a href="/setup#step-2" class="btn btn-ghost">{{ t('people.go_setup') }}</a></p>
+  </section>
+  {% endif %}
+
+  {# ---- re-sync drifted photo tags to current people ---- #}
+  {% if orphans and people %}
+  <section class="pg-card pg-resync">
+    <h2>{{ t('people.resync_title') }}</h2>
+    <p class="pg-sub">{{ t('people.resync_help') }}</p>
+    <form onsubmit="return resyncTags(event)">
+      {% for o in orphans %}
+      <div class="pg-resync-row">
+        <span class="pg-chip" dir="auto">{{ o }}</span>
+        <span class="pg-resync-arrow" aria-hidden="true">→</span>
+        <input type="hidden" name="old" value="{{ o }}">
+        <select name="new" dir="auto">
+          <option value="">{{ t('people.resync_leave') }}</option>
+          {% for p in people %}<option value="{{ p.label }}" dir="auto">{{ p.label }}</option>{% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-primary">{{ t('people.resync_apply') }}</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {# ---- groups ---- #}
+  <section class="pg-card">
+    <h2>{{ t('people.groups_heading') }}</h2>
+    <form class="pg-new-group" onsubmit="return createGroup(event)">
+      <input type="text" name="name" dir="auto" placeholder="{{ t('people.new_group_ph') }}" required>
+      <button type="submit" class="btn btn-secondary">{{ t('people.create') }}</button>
+    </form>
+
+    {% if not groups %}
+    <p class="pg-empty">{{ t('people.no_groups') }}</p>
+    {% else %}
+    <ul class="pg-list">
+      {% for g in groups %}
+      <li class="pg-group">
+        <div class="pg-group-head" id="gh-{{ g.id }}">
+          <span class="pg-name" dir="auto">{{ g.name }}</span>
+          <span class="pg-meta">{{ t('people.members_n', n=g.count) }}</span>
+          <span class="pg-group-tools">
+            <button type="button" class="btn btn-ghost" onclick="startRename({{ g.id }})">{{ t('people.rename') }}</button>
+            <button type="button" class="btn btn-ghost pg-danger" onclick="askDelete({{ g.id }})">{{ t('people.delete') }}</button>
+          </span>
+        </div>
+        {# inline rename (no prompt(): webviews can block it) #}
+        <form class="pg-inline" id="gr-{{ g.id }}" hidden onsubmit="return submitRename(event, {{ g.id }})">
+          <input type="text" name="name" dir="auto" value="{{ g.name }}" required>
+          <button type="submit" class="btn btn-secondary">{{ t('people.save') }}</button>
+          <button type="button" class="btn btn-ghost" onclick="cancelRename({{ g.id }})">{{ t('people.cancel') }}</button>
+        </form>
+        {# inline delete confirm #}
+        <div class="pg-inline pg-confirm" id="gd-{{ g.id }}" hidden>
+          <span>{{ t('people.delete_q') }}</span>
+          <button type="button" class="btn btn-secondary pg-danger" onclick="deleteGroup({{ g.id }})">{{ t('people.delete') }}</button>
+          <button type="button" class="btn btn-ghost" onclick="cancelDelete({{ g.id }})">{{ t('people.cancel') }}</button>
+        </div>
+
+        <div class="pg-chips">
+          {% if g.members %}
+            {% for m in g.members %}
+            <span class="pg-chip" dir="auto">{{ m }}<button class="pg-chip-x" title="{{ t('people.remove') }}"
+                  onclick="removeMember({{ g.id }}, {{ m | tojson }})">×</button></span>
+            {% endfor %}
+          {% else %}
+            <span class="pg-chip pg-chip-none">{{ t('people.empty_group') }}</span>
+          {% endif %}
+        </div>
+        {% set non_members = people | rejectattr('label', 'in', g.members) | list %}
+        {% if non_members %}
+        <select class="pg-select" onchange="addMember({{ g.id }}, this.value, this)">
+          <option value="">{{ t('people.add_person') }}</option>
+          {% for p in non_members %}<option value="{{ p.label }}" dir="auto">{{ p.label }}</option>{% endfor %}
+        </select>
+        {% elif people %}
+        <p class="pg-hint">{{ t('people.group_full') }}</p>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  {# ---- all people (on-demand roster; add any to a group) ---- #}
+  {% if people %}
+  <section class="pg-card">
+    <details class="pg-allpeople">
+      <summary>{{ t('people.all_people', n=people|length) }}</summary>
+      <ul class="pg-list pg-people-list">
+        {% for p in people %}
+        <li class="pg-person">
+          <div class="pg-person-main">
+            <span class="pg-name" dir="auto">{{ p.label }}</span>
+            <span class="pg-meta">{{ t('people.photos_n', n=p.photo_count) }}</span>
+          </div>
+          <div class="pg-chips">
+            {% if p.groups %}
+              {% for gname in p.groups %}<span class="pg-chip" dir="auto">{{ gname }}</span>{% endfor %}
+            {% else %}
+              <span class="pg-chip pg-chip-none">{{ t('people.not_in_group') }}</span>
+            {% endif %}
+          </div>
+          {% set open_groups = groups | rejectattr('name', 'in', p.groups) | list %}
+          {% if open_groups %}
+          <select class="pg-select" onchange="addMember(this.value, {{ p.label | tojson }}, this)">
+            <option value="">{{ t('people.add_a_group') }}</option>
+            {% for g in open_groups %}<option value="{{ g.id }}" dir="auto">{{ g.name }}</option>{% endfor %}
+          </select>
+          {% elif groups %}
+          <p class="pg-hint">{{ t('people.in_all_groups') }}</p>
+          {% else %}
+          <p class="pg-hint">{{ t('people.no_groups_yet') }}</p>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </details>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+async function post(url, data) {
+  const res = await fetch(url, { method: "POST", body: new URLSearchParams(data) });
+  if (!res.ok) {
+    let msg = "Request failed";
+    try { msg = (await res.json()).detail || msg; } catch (e) {}
+    alert(msg);
+    return false;
+  }
+  return true;
+}
+async function createGroup(e) {
+  e.preventDefault();
+  const name = e.target.name.value.trim();
+  if (name && await post("/people/groups", { name })) location.reload();
+  return false;
+}
+async function resyncTags(e) {
+  e.preventDefault();
+  const res = await fetch("/people/resync", { method: "POST", body: new URLSearchParams(new FormData(e.target)) });
+  if (!res.ok) { alert("Request failed"); return false; }
+  location.reload();
+  return false;
+}
+function startRename(id) {
+  cancelDelete(id);
+  document.getElementById("gh-" + id).hidden = true;
+  const f = document.getElementById("gr-" + id); f.hidden = false;
+  f.name.focus(); f.name.select();
+}
+function cancelRename(id) {
+  const f = document.getElementById("gr-" + id); if (f) f.hidden = true;
+  document.getElementById("gh-" + id).hidden = false;
+}
+async function submitRename(e, id) {
+  e.preventDefault();
+  const name = e.target.name.value.trim();
+  if (name && await post(`/people/groups/${id}/rename`, { name })) location.reload();
+  return false;
+}
+function askDelete(id) {
+  cancelRename(id);
+  document.getElementById("gh-" + id).hidden = true;
+  document.getElementById("gd-" + id).hidden = false;
+}
+function cancelDelete(id) {
+  const d = document.getElementById("gd-" + id); if (d) d.hidden = true;
+  document.getElementById("gh-" + id).hidden = false;
+}
+async function deleteGroup(id) {
+  if (await post(`/people/groups/${id}/delete`, {})) location.reload();
+}
+async function addMember(groupId, label, el) {
+  if (!groupId || !label) { if (el) el.value = ""; return; }
+  if (await post(`/people/groups/${groupId}/members`, { label, action: "add" })) location.reload();
+}
+async function removeMember(groupId, label) {
+  if (await post(`/people/groups/${groupId}/members`, { label, action: "remove" })) location.reload();
+}
+</script>
+{% endblock %}

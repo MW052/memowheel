@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ t('people.search_btn') }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="pg">
+  <header class="pg-head">
+    <a href="/people" class="btn btn-ghost pg-back">‹ {{ t('people.back') }}</a>
+    <h1>{{ t('people.title') }}</h1>
+  </header>
+
+  {# ---- search box (prefilled, scope preserved) ---- #}
+  <section class="pg-card pg-search">
+    <form action="/people/search" method="get" class="pg-search-form">
+      <input type="search" name="q" dir="auto" value="{{ q or '' }}" list="name-options"
+             placeholder="{{ t('people.search_ph') }}" required autofocus autocomplete="off">
+      <datalist id="name-options">
+        {% for name in name_options %}<option value="{{ name }}"></option>{% endfor %}
+      </datalist>
+      <fieldset class="pg-scope">
+        <span class="pg-scope-label">{{ t('people.scope_label') }}:</span>
+        <label><input type="radio" name="scope" value="current" {{ 'checked' if scope != 'all' }}> {{ t('people.scope_current') }}</label>
+        <label><input type="radio" name="scope" value="all" {{ 'checked' if scope == 'all' }}> {{ t('people.scope_all') }}</label>
+      </fieldset>
+      <button type="submit" class="btn btn-primary">{{ t('people.search_btn') }}</button>
+    </form>
+  </section>
+
+  {% if results %}
+    <div class="pg-results-head">
+      <h2 dir="auto">{{ t('people.results_for', q=q) }}</h2>
+      {% if results.people or results.groups %}
+      <p class="pg-matched">
+        {% if results.people %}<span class="pg-matched-label">{{ t('people.matched_people') }}:</span>
+          {% for p in results.people %}<span class="pg-chip" dir="auto">{{ p }}</span>{% endfor %}{% endif %}
+        {% if results.groups %}<span class="pg-matched-label">{{ t('people.matched_groups') }}:</span>
+          {% for g in results.groups %}<span class="pg-chip" dir="auto">{{ g }}</span>{% endfor %}{% endif %}
+      </p>
+      {% endif %}
+    </div>
+
+    {% if not results.labels %}
+      <p class="pg-empty">{{ t('people.no_match_query', q=q) }}</p>
+    {% elif results.total == 0 %}
+      <p class="pg-empty">{{ t('people.no_photos', q=q) }}</p>
+    {% else %}
+      <p class="pg-total">{{ t('people.total_n', n=results.total) }}</p>
+      {% for proj in results.projects %}
+      <section class="sr-project">
+        <div class="sr-project-head">
+          <h3 dir="auto">{{ proj.name }}</h3>
+          {% if proj.current %}
+            <span class="sr-badge">{{ t('people.current_badge') }}</span>
+          {% else %}
+            <form action="/projects/{{ proj.id }}/open" method="post" class="sr-open-form">
+              <button type="submit" class="btn btn-secondary">{{ t('people.open_trip') }}</button>
+            </form>
+          {% endif %}
+          <span class="pg-meta">{{ t('people.total_n', n=proj['items'] | length) }}</span>
+        </div>
+        <div class="grid sr-grid">
+          {% for it in proj['items'] %}
+          {% set src = "/people/search/media?item_id=" ~ it.id ~ "&project=" ~ (it.project_id or "") %}
+          <figure class="item sr-item">
+            <div class="card-media">
+              {% if it.item_type == 'photo' %}
+                <img src="{{ src }}" loading="lazy" alt="">
+              {% else %}
+                <video src="{{ src }}" preload="metadata" muted playsinline></video>
+                <span class="sr-clip" aria-hidden="true">▶</span>
+              {% endif %}
+            </div>
+            {% if it.face_tags %}<figcaption class="tags" dir="auto">{{ it.face_tags | join(', ') }}</figcaption>{% endif %}
+            {% if it.place_name %}<div class="card-place" dir="auto">📍 {{ it.place_name }}</div>{% endif %}
+          </figure>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

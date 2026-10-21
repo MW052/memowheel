@@ -20,6 +20,7 @@ from fastapi.responses import FileResponse, HTMLResponse, Response
 
 import config
 import paths
+import people
 import secret_store
 from cloud.llm import test_llm
 from db.schema import get_connection, DEFAULT_DB_PATH
@@ -180,6 +181,7 @@ async def add_person(
 def delete_person(label: str, conn=Depends(get_db)):
     conn.execute("DELETE FROM enrolled_faces WHERE person_label = ?", (label,))
     conn.commit()
+    people.on_person_deleted(conn, label)  # drop them from any group
     return {"ok": True}
 
 
@@ -200,16 +202,14 @@ def rename_person(label: str, new_name: str = Form(...), conn=Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"'{new_name}' is already an enrolled person.")
 
     conn.execute("UPDATE enrolled_faces SET person_label = ? WHERE person_label = ?", (new_name, label))
-    # Rewrite face_tags on every item that mentions the old label (LIKE narrows
-    # the scan; exact list membership is checked before rewriting).
-    for r in conn.execute(
-        'SELECT id, face_tags FROM items WHERE face_tags LIKE ?', (f'%"{label}"%',)
-    ).fetchall():
-        tags = json.loads(r["face_tags"])
-        if label in tags:
-            tags = sorted({new_name if t == label else t for t in tags})
-            conn.execute("UPDATE items SET face_tags = ? WHERE id = ?", (json.dumps(tags), r["id"]))
     conn.commit()
+    # Rewrite the face tag everywhere the person appears - the live catalog AND
+    # every other trip's catalog, since people are shared but face_tags are
+    # per-project. relabel reads tags via json.loads, so it also catches Hebrew
+    # labels (which the old LIKE-on-raw-text scan silently missed).
+    people.relabel_in_catalog(conn, {label: new_name})
+    people.relabel_other_projects({label: new_name})
+    people.on_person_renamed(conn, label, new_name)  # follow the rename through group membership
     return {"ok": True}
 
 
