@@ -19,7 +19,7 @@ window.tf = (k, vars, d) => {
 <body>
 {% set path = request.url.path %}
 {% set workspace = path.startswith('/review') or path.startswith('/preview') or path.startswith('/finish') %}
-{% set has_menu = workspace or path.startswith('/setup') or path.startswith('/trip') or path.startswith('/logs') or path.startswith('/people') %}
+{% set has_menu = workspace or path.startswith('/setup') or path.startswith('/trip') or path.startswith('/logs') or path.startswith('/people') or path.startswith('/gallery') %}
 
 <header class="app-header {{ 'is-workspace' if workspace else 'is-minimal' }}">
   <div class="ah-left">
@@ -29,15 +29,18 @@ window.tf = (k, vars, d) => {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
       <div class="ah-menu" id="ah-menu" hidden>
+        <div class="ah-menu-label">{{ t('feature.trip.name') }}</div>
         <a href="/trip">{{ t('projects.switch') }}</a>
         <a href="/review">{{ t('nav.story') }}</a>
-        <a href="/people">{{ t('nav.people') }}</a>
-        <div class="ah-menu-label">{{ t('nav.setup') }}</div>
         <a href="/setup#step-1">{{ t('setup.wiz.step_photos') }}</a>
         <a href="/setup#step-2">{{ t('setup.wiz.step_people') }}</a>
         <a href="/setup#step-3">{{ t('setup.wiz.step_mood') }}</a>
         <a href="/setup#step-4">{{ t('setup.wiz.step_music') }}</a>
         <a href="/setup#step-5">{{ t('setup.wiz.step_import') }}</a>
+        <hr>
+        <div class="ah-menu-label">{{ t('nav.people_section') }}</div>
+        <a href="/people">{{ t('nav.people') }}</a>
+        <a href="/gallery">{{ t('nav.gallery') }}</a>
         <hr>
         <a href="/logs">{{ t('nav.log') }}</a>
         <a href="/">{{ t('nav.home') }}</a>

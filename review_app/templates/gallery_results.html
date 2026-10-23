@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}{{ t('gallery.search_btn') }} · {{ app_name }}{% endblock %}
+
+{% macro tile(h) %}
+{% set src = "/gallery/media?path=" ~ (h.path | urlencode) ~ ("&t=" ~ h.t_ms if h.kind == 'clip' and h.t_ms is not none else "") %}
+{% set nm = h.path.split('\\')[-1].split('/')[-1] %}
+<figure class="item sr-item gl-tile {{ 'gl-maybe' if h.tier == 'maybe' }}"
+        data-score="{{ h.score }}" data-name="{{ nm | lower }}" data-path="{{ h.path }}"
+        oncontextmenu="return tileMenu(event, this)">
+  <label class="gl-pick" onclick="event.stopPropagation()"><input type="checkbox" class="gl-check" value="{{ h.path }}" checked></label>
+  <div class="card-media">
+    <img src="{{ src }}" data-full="{{ src ~ '&full=1' }}" loading="lazy" alt=""
+         onclick="openLightbox(this.dataset.full)">
+    {% if h.kind == 'clip' %}<span class="sr-clip" aria-hidden="true">▶</span>{% endif %}
+    <span class="gl-score" title="{{ t('gallery.match_score') }}">{{ (h.score * 100) | round | int }}%</span>
+  </div>
+  <figcaption class="gl-cap" dir="auto">
+    <span class="gl-name">{{ nm }}</span>
+    {% if h.kind == 'clip' and h.t_ms is not none %}<span class="gl-at">▶ {{ '%d:%02d' % ((h.t_ms // 60000), (h.t_ms // 1000) % 60) }}</span>{% endif %}
+  </figcaption>
+</figure>
+{% endmacro %}
+
+{% macro mediaSection(label, group) %}
+{% set all = group.confident + group.maybe %}
+{% if all %}
+<section class="sr-project">
+  <div class="sr-project-head"><h3>{{ label }}</h3>
+    <span class="pg-meta">{{ t('gallery.matches_n', n=all|length) }}</span></div>
+  {% if group.confident %}
+  <div class="grid sr-grid">{% for h in group.confident %}{{ tile(h) }}{% endfor %}</div>
+  {% endif %}
+  {% if group.maybe %}
+  <div class="gl-subhead">{{ t('gallery.maybe') }} <span class="pg-meta">· {{ t('gallery.maybe_hint') }}</span></div>
+  <div class="grid sr-grid">{% for h in group.maybe %}{{ tile(h) }}{% endfor %}</div>
+  {% endif %}
+</section>
+{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="pg">
+  <header class="pg-head">
+    <a href="/gallery" class="btn btn-ghost pg-back">‹ {{ t('gallery.title') }}</a>
+    <h1>{{ t('gallery.title') }}</h1>
+  </header>
+
+  <section class="pg-card pg-search">
+    <form action="/gallery/search" method="get" class="pg-search-form">
+      <input type="search" name="q" dir="auto" value="{{ q or '' }}" list="target-options"
+             placeholder="{{ t('gallery.search_ph') }}" required autofocus autocomplete="off">
+      <datalist id="target-options">
+        {% for tg in targets %}<option value="{{ tg.name }}"></option>{% endfor %}
+      </datalist>
+      <label class="gl-tier">{{ t('gallery.sensitivity') }}:
+        <select name="tier">
+          {% for tr in tiers %}<option value="{{ tr }}" {{ 'selected' if tr == tier }}>{{ t('gallery.tier_' ~ tr) }}</option>{% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="btn btn-primary">{{ t('gallery.search_btn') }}</button>
+    </form>
+  </section>
+
+  {% if result %}
+    {% if not result.matched %}
+      <p class="pg-empty">{{ t('gallery.no_target', q=q) }}</p>
+    {% elif result.total == 0 %}
+      <p class="pg-empty">{{ t('gallery.no_matches', name=result.matched) }}
+        {% if status.subjects == 0 %}<br><span class="pg-hint">{{ t('gallery.need_index') }}</span>{% endif %}</p>
+    {% else %}
+      <div class="pg-results-head">
+        <h2 dir="auto">{{ t('gallery.matches_for', name=result.matched) }}</h2>
+        <p class="pg-total">{{ t('gallery.matches_n', n=result.total) }}</p>
+        <label class="gl-sort-ctl">{{ t('gallery.sort_by') }}:
+          <select id="gl-sort" onchange="sortGrids()">
+            <option value="match">{{ t('gallery.sort_match') }}</option>
+            <option value="name">{{ t('gallery.sort_name') }}</option>
+          </select>
+        </label>
+      </div>
+
+      {# export bar: destination chooser sits next to Copy / Move #}
+      <form class="gl-export" onsubmit="return doExport(event)">
+        <label class="gl-selall"><input type="checkbox" id="gl-all" checked onchange="toggleAll(this)"> {{ t('gallery.select_all') }}</label>
+        <span id="gl-dest-show" class="pg-meta" dir="auto"></span>
+        <span class="gl-export-actions">
+          <input type="hidden" name="dest" id="gl-dest-val">
+          <button type="button" class="btn btn-secondary" onclick="openFolderPicker(setDest)">{{ t('gallery.choose_dest') }}</button>
+          <button type="submit" name="mode" value="copy" class="btn btn-secondary">{{ t('gallery.copy_here') }}</button>
+          <button type="submit" name="mode" value="move" class="btn btn-ghost">{{ t('gallery.move_here') }}</button>
+        </span>
+      </form>
+
+      {{ mediaSection(t('gallery.photos'), result.photos) }}
+      {{ mediaSection(t('gallery.clips'), result.clips) }}
+    {% endif %}
+  {% endif %}
+</div>
+
+{# lightbox + right-click menu #}
+<div id="gl-lightbox" class="gl-lightbox" style="display:none" onclick="closeLightbox()">
+  <img id="gl-lightbox-img" alt="">
+</div>
+<div id="gl-menu" class="gl-menu" style="display:none">
+  <button type="button" onclick="removeFromTarget()">{% if result and result.matched %}{{ t('gallery.remove_from', name=result.matched) }}{% endif %}</button>
+</div>
+
+{% include "_folderpicker.html" %}
+{% endblock %}
+
+{% block script %}
+<script>
+const GL_TARGET = {{ (result.matched if result and result.matched else none) | tojson }};
+let GL_MENU_PATH = null, GL_MENU_TILE = null;
+
+function toggleAll(cb) { document.querySelectorAll(".gl-check").forEach((c) => { c.checked = cb.checked; }); }
+function sortGrids() {
+  const key = document.getElementById("gl-sort").value;
+  document.querySelectorAll(".sr-grid").forEach((grid) => {
+    Array.from(grid.children)
+      .sort((a, b) => key === "name"
+        ? a.dataset.name.localeCompare(b.dataset.name)
+        : parseFloat(b.dataset.score) - parseFloat(a.dataset.score))
+      .forEach((tile) => grid.appendChild(tile));
+  });
+}
+
+// ---- lightbox ----
+function openLightbox(src) {
+  document.getElementById("gl-lightbox-img").src = src;
+  document.getElementById("gl-lightbox").style.display = "flex";
+}
+function closeLightbox() {
+  document.getElementById("gl-lightbox").style.display = "none";
+  document.getElementById("gl-lightbox-img").src = "";
+}
+
+// ---- right-click: remove from this person/group ----
+function tileMenu(e, tile) {
+  if (!GL_TARGET) return true;  // nothing to remove from
+  e.preventDefault();
+  GL_MENU_PATH = tile.dataset.path; GL_MENU_TILE = tile;
+  const m = document.getElementById("gl-menu");
+  m.style.display = "block";
+  m.style.left = Math.min(e.pageX, window.innerWidth - 220) + "px";
+  m.style.top = e.pageY + "px";
+  setTimeout(() => document.addEventListener("click", hideMenu, { once: true }), 0);
+  return false;
+}
+function hideMenu() { document.getElementById("gl-menu").style.display = "none"; }
+async function removeFromTarget() {
+  if (!GL_MENU_PATH || !GL_TARGET) return;
+  const body = new URLSearchParams({ target: GL_TARGET, path: GL_MENU_PATH });
+  const res = await fetch("/gallery/exclude", { method: "POST", body });
+  if (res.ok && GL_MENU_TILE) GL_MENU_TILE.remove();
+  hideMenu();
+}
+
+// ---- export ----
+function setDest(p) { document.getElementById("gl-dest-val").value = p; document.getElementById("gl-dest-show").textContent = p; }
+async function doExport(e) {
+  e.preventDefault();
+  const mode = (e.submitter && e.submitter.value) || "copy";
+  const dest = e.target.dest.value.trim();
+  if (!dest) { alert(window.t("gallery.need_dest")); return false; }
+  const body = new URLSearchParams();
+  body.append("dest", dest);
+  body.append("mode", mode);
+  document.querySelectorAll(".gl-check:checked").forEach((c) => body.append("paths", c.value));
+  if (!body.getAll("paths").length) { alert(window.t("gallery.select_some")); return false; }
+  const res = await fetch("/gallery/export", { method: "POST", body });
+  if (!res.ok) { alert("Export failed"); return false; }
+  const r = await res.json();
+  alert(window.tf("gallery.exported", { n: r.count, dest: r.dest }));
+  if (mode === "move") location.reload();  // moved files are gone from the index on next scan
+  return false;
+}
+
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeLightbox(); hideMenu(); } });
+</script>
+{% endblock %}

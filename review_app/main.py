@@ -10,7 +10,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import PlainTextResponse
 
 from db.schema import init_db
-from review_app.routes import review, consent, faces, setup, hub, lang, logs, people
+from review_app.routes import review, consent, faces, setup, hub, lang, logs, people, gallery
 
 # Timestamped uvicorn logging that also persists to data/logs/tripvideo.log.
 # Kept importable under this name for manage.py / app_main.py.
@@ -65,6 +65,7 @@ app.include_router(consent.router)
 app.include_router(faces.router)
 app.include_router(setup.router)
 app.include_router(people.router)
+app.include_router(gallery.router)
 app.include_router(logs.router)
 
 from paths import resource_path

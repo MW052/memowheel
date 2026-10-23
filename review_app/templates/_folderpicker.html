@@ -1,0 +1,34 @@
+{# Reusable click-through folder picker (same /setup/browse endpoint + .picker
+   styles the setup wizard uses). Call window.openFolderPicker(cb) — cb(path) runs
+   with the chosen absolute folder. Include once per page. #}
+<div id="fp-modal" class="picker" style="display:none">
+  <div class="picker-box">
+    <div class="picker-path" id="fp-path"></div>
+    <div class="picker-list" id="fp-list"></div>
+    <div class="picker-actions">
+      <button type="button" class="btn btn-secondary" onclick="fpClose()">{{ t('setup.cancel') }}</button>
+      <button type="button" class="btn btn-primary" id="fp-use" onclick="fpUse()">{{ t('setup.use_folder') }}</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  const ROOT = "::computer";
+  let fpPath = null, fpCb = null;
+  function row(text) { const e = document.createElement("div"); e.className = "picker-item"; e.textContent = text; return e; }
+  async function load(path) {
+    const d = await (await fetch("/setup/browse?path=" + encodeURIComponent(path || ""))).json();
+    fpPath = d.path;
+    const atPC = d.path === ROOT;
+    document.getElementById("fp-path").textContent = d.label || d.path;
+    const list = document.getElementById("fp-list"); list.innerHTML = "";
+    if (d.parent) { const up = row("⬑ " + window.t("setup.js.up")); up.onclick = () => load(d.parent); list.appendChild(up); }
+    if (!atPC) { const pc = row("🖥 " + window.t("setup.js.this_pc")); pc.onclick = () => load(ROOT); list.appendChild(pc); }
+    d.dirs.forEach((e) => { const r = row((atPC ? "💽 " : "📁 ") + e.name); r.onclick = () => load(e.path); list.appendChild(r); });
+    document.getElementById("fp-use").disabled = atPC;
+  }
+  window.openFolderPicker = function (cb, start) { fpCb = cb; document.getElementById("fp-modal").style.display = "flex"; load(start || ""); };
+  window.fpClose = function () { document.getElementById("fp-modal").style.display = "none"; };
+  window.fpUse = function () { if (fpPath && fpPath !== ROOT && fpCb) fpCb(fpPath); fpClose(); };
+})();
+</script>

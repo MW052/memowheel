@@ -17,6 +17,7 @@ import io
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
+import face_index
 import paths
 import people
 import project_store
@@ -25,6 +26,17 @@ from review_app.db import get_db
 from review_app.templating import templates
 
 router = APIRouter()
+
+
+@router.get("/people/home", response_class=HTMLResponse)
+def people_home(request: Request, conn=Depends(get_db)):
+    """Top-level People home: the shared people domain (identities + library
+    search), a peer to the makers - not part of any one of them."""
+    return templates.TemplateResponse(request, "people_home.html", {
+        "people_count": len(people.list_people(conn)),
+        "group_count": len(people.list_groups(conn)),
+        "index": face_index.index_status(),
+    })
 
 
 @router.get("/people", response_class=HTMLResponse)

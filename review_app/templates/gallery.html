@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ t('gallery.title') }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="pg">
+  <header class="pg-head">
+    <h1>{{ t('gallery.title') }}</h1>
+    <p class="pg-sub">{{ t('gallery.subtitle') }}</p>
+  </header>
+
+  {# ---- search ---- #}
+  <section class="pg-card pg-search">
+    <h2>{{ t('gallery.search_heading') }}</h2>
+    {% if not targets %}
+    <p class="pg-empty">{{ t('gallery.no_people') }}
+      <a href="/people" class="btn btn-ghost">{{ t('nav.people') }}</a></p>
+    {% elif status.subjects == 0 %}
+    <p class="pg-hint">{{ t('gallery.need_index') }}</p>
+    {% endif %}
+    <form action="/gallery/search" method="get" class="pg-search-form">
+      <input type="search" name="q" dir="auto" list="target-options"
+             placeholder="{{ t('gallery.search_ph') }}" required autofocus autocomplete="off">
+      <datalist id="target-options">
+        {% for tg in targets %}<option value="{{ tg.name }}"></option>{% endfor %}
+      </datalist>
+      <label class="gl-tier">{{ t('gallery.sensitivity') }}:
+        <select name="tier">
+          {% for tr in tiers %}<option value="{{ tr }}" {{ 'selected' if tr == 'balanced' }}>{{ t('gallery.tier_' ~ tr) }}</option>{% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="btn btn-primary">{{ t('gallery.search_btn') }}</button>
+    </form>
+  </section>
+
+  {# ---- libraries + index ---- #}
+  <section class="pg-card">
+    <h2>{{ t('gallery.libraries_heading') }}</h2>
+    {% if libraries %}
+    <ul class="pg-list gl-libs">
+      {% for d in libraries %}
+      <li class="gl-lib"><span dir="auto">{{ d }}</span>
+        <button class="btn btn-ghost pg-danger" onclick="removeLib({{ d | tojson }})">{{ t('gallery.remove') }}</button>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="pg-empty">{{ t('gallery.no_libraries') }}</p>
+    {% endif %}
+
+    <div class="gl-add">
+      <button type="button" class="btn btn-secondary" onclick="openFolderPicker(addLibPath)">{{ t('gallery.add') }}</button>
+    </div>
+
+    <div class="gl-index">
+      <p class="pg-meta gl-status">{{ t('gallery.status_line',
+          files=status.files, photos=status.photos, clips=status.clips, subjects=status.subjects) }}
+        {% if reindex.state == 'done' and reindex.elapsed %}{% set e = reindex.elapsed | int %}
+        · {{ t('gallery.last_index', time='%d:%02d' % (e // 60, e % 60)) }}{% endif %}</p>
+      <button class="btn btn-primary" id="reindex-btn" onclick="reindex()">{{ t('gallery.reindex') }}</button>
+      <div id="reindex-progress" class="gl-progress" hidden>
+        <div class="gl-bar"><div class="gl-bar-fill" id="reindex-fill"></div></div>
+        <span id="reindex-msg" class="pg-meta"></span>
+      </div>
+    </div>
+  </section>
+</div>
+{% include "_folderpicker.html" %}
+{% endblock %}
+
+{% block script %}
+<script>
+async function post(url, data) {
+  const res = await fetch(url, { method: "POST", body: new URLSearchParams(data) });
+  if (!res.ok) { let m = "Request failed"; try { m = (await res.json()).detail || m; } catch (e) {} alert(m); return false; }
+  return true;
+}
+async function addLibPath(folder) {
+  if (folder && await post("/gallery/libraries/add", { folder })) location.reload();
+}
+async function removeLib(folder) {
+  if (await post("/gallery/libraries/remove", { folder })) location.reload();
+}
+async function reindex() {
+  const btn = document.getElementById("reindex-btn");
+  btn.disabled = true;
+  if (!await post("/gallery/reindex", {})) { btn.disabled = false; return; }
+  document.getElementById("reindex-progress").hidden = false;
+  poll();
+}
+function fmtElapsed(sec) {
+  sec = Math.max(0, Math.round(sec || 0));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m + ":" + String(s).padStart(2, "0");
+}
+async function poll() {
+  const res = await fetch("/gallery/reindex/status");
+  const s = await res.json();
+  const pct = s.total ? Math.round((s.done / s.total) * 100) : (s.state === "running" ? 5 : 100);
+  document.getElementById("reindex-fill").style.width = pct + "%";
+  const msg = document.getElementById("reindex-msg");
+  const el = fmtElapsed(s.elapsed);
+  if (s.state === "running") {
+    msg.textContent = window.tf("gallery.indexing", { done: s.done, total: s.total }) + " · " + el;
+    setTimeout(poll, 700);
+  } else if (s.state === "done") {
+    msg.textContent = window.t("gallery.index_complete") + " · " + el;
+    setTimeout(() => location.reload(), 1400);
+  } else if (s.state === "error") {
+    msg.textContent = s.message;
+    document.getElementById("reindex-btn").disabled = false;
+  }
+}
+// If an index job is already running when the page loads, resume showing it.
+(function () {
+  {% if reindex.state == 'running' %}
+  document.getElementById("reindex-btn").disabled = true;
+  document.getElementById("reindex-progress").hidden = false;
+  poll();
+  {% endif %}
+})();
+</script>
+{% endblock %}

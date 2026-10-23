@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ t('people_home.title') }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="pg">
+  <header class="pg-head">
+    <h1>{{ t('people_home.title') }}</h1>
+    <p class="pg-sub">{{ t('people_home.subtitle') }}</p>
+  </header>
+
+  <div class="feature-grid ph-grid">
+    <a class="feature-card" href="/people">
+      <span class="feature-emoji">🧑‍🤝‍🧑</span>
+      <span class="feature-name">{{ t('nav.people') }}</span>
+      <span class="feature-desc">{{ t('people_home.groups_desc') }}</span>
+      <span class="ph-stat">{{ t('people_home.people_n', n=people_count) }}{% if group_count %} · {{ t('people_home.groups_n', n=group_count) }}{% endif %}</span>
+    </a>
+    <a class="feature-card" href="/gallery">
+      <span class="feature-emoji">🔍</span>
+      <span class="feature-name">{{ t('nav.gallery') }}</span>
+      <span class="feature-desc">{{ t('people_home.library_desc') }}</span>
+      <span class="ph-stat">{{ t('people_home.indexed_n', n=index.photos) }}</span>
+    </a>
+  </div>
+</div>
+{% endblock %}

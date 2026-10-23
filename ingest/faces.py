@@ -275,6 +275,22 @@ def load_enrolled(conn) -> dict[str, np.ndarray]:
     }
 
 
+def load_enrollment_set(conn) -> dict[str, list[np.ndarray]]:
+    """Loads ALL enrollments per person label, not just the latest - one person
+    may have several reference sets (different years/angles), and gallery search
+    matches a photo against the NEAREST of them, which recalls faces across a
+    lifetime far better than a single averaged vector. The trip tagger keeps using
+    `load_enrolled` (one averaged embedding) unchanged."""
+    out: dict[str, list[np.ndarray]] = {}
+    for row in conn.execute(
+        "SELECT person_label, embedding FROM enrolled_faces ORDER BY person_label, created_at"
+    ):
+        out.setdefault(row["person_label"], []).append(
+            np.frombuffer(row["embedding"], dtype=np.float32)
+        )
+    return out
+
+
 PIXELATION_BLOCKS = 8  # downscale target size - fixed regardless of face size,
                         # which is exactly what makes this scale correctly
 

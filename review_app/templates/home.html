@@ -24,4 +24,15 @@
   {% endif %}
   {% endfor %}
 </div>
+
+{# People is shared infrastructure every maker uses - shown apart from the maker
+   cards, not as another maker. #}
+<a class="people-banner" href="/people/home">
+  <span class="feature-emoji">🧑‍🤝‍🧑</span>
+  <span class="people-banner-text">
+    <span class="feature-name">{{ t('hub.people.name') }}</span>
+    <span class="feature-desc">{{ t('hub.people.desc') }}</span>
+  </span>
+  <span class="people-banner-go" aria-hidden="true">›</span>
+</a>
 {% endblock %}
