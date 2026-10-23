@@ -352,14 +352,14 @@ def index_status() -> dict:
 # ---------------------------------------------------------------------------
 # Matching (ranked, nearest-of-many embeddings, confidence tiers)
 # ---------------------------------------------------------------------------
-def match(embeddings: list[np.ndarray], tier: str = DEFAULT_TIER,
-          backend_name: str = "face") -> list[dict]:
-    """Rank media by how well their faces match ANY of `embeddings`.
+def all_scores(embeddings: list[np.ndarray],
+               backend_name: str = "face") -> list[dict]:
+    """Best match score for EVERY indexed media, with NO cutoff applied.
 
-    Returns [{path, kind, score, t_ms, tier}] best-first, where `tier` is
-    'confident' or 'maybe'. Scores below the tier's maybe-cutoff are dropped.
+    Returns [{path, kind, score, t_ms}] best-first (raw cosine, un-rounded).
+    `match` is this plus a tier cutoff; a calibration pass wants the full
+    distribution - every genuine and impostor score - to choose the cutoffs.
     """
-    hi, lo = TIERS.get(tier, TIERS[DEFAULT_TIER])
     if not embeddings:
         return []
     E = np.stack([e.astype(np.float32) for e in embeddings])  # (k, d)
@@ -380,20 +380,36 @@ def match(embeddings: list[np.ndarray], tier: str = DEFAULT_TIER,
             if cur is None or score > cur[0]:
                 best[p] = (score, row["t_ms"])
 
-        hits = []
-        for p, (score, t_ms) in best.items():
-            if score >= lo:
-                hits.append({
-                    "path": p,
-                    "kind": kinds.get(p, "photo"),
-                    "score": round(score, 3),
-                    "t_ms": t_ms,
-                    "tier": "confident" if score >= hi else "maybe",
-                })
+        hits = [
+            {"path": p, "kind": kinds.get(p, "photo"), "score": score, "t_ms": t_ms}
+            for p, (score, t_ms) in best.items()
+        ]
         hits.sort(key=lambda h: h["score"], reverse=True)
         return hits
     finally:
         conn.close()
+
+
+def match(embeddings: list[np.ndarray], tier: str = DEFAULT_TIER,
+          backend_name: str = "face") -> list[dict]:
+    """Rank media by how well their faces match ANY of `embeddings`.
+
+    Returns [{path, kind, score, t_ms, tier}] best-first, where `tier` is
+    'confident' or 'maybe'. Scores below the tier's maybe-cutoff are dropped.
+    """
+    hi, lo = TIERS.get(tier, TIERS[DEFAULT_TIER])
+    hits = []
+    for h in all_scores(embeddings, backend_name):
+        score = h["score"]
+        if score >= lo:
+            hits.append({
+                "path": h["path"],
+                "kind": h["kind"],
+                "score": round(score, 3),
+                "t_ms": h["t_ms"],
+                "tier": "confident" if score >= hi else "maybe",
+            })
+    return hits
 
 
 def _person_embeddings(label: str) -> list[np.ndarray]:
