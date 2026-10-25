@@ -1,6 +1,6 @@
-# PyInstaller spec for Trip Video / Memowheel (one-folder build).
-# Build from the project root:  py -m PyInstaller --noconfirm packaging/trip_video.spec
-# Produces dist/TripVideo/TripVideo.exe (double-clickable, no Python needed).
+# PyInstaller spec for Memowheel (one-folder build; app = Trip Video + Occasion Video).
+# Build from the project root:  py -m PyInstaller --noconfirm packaging/memowheel.spec
+# Produces dist/Memowheel/Memowheel.exe (double-clickable, no Python needed).
 
 import os
 from PyInstaller.utils.hooks import collect_all, copy_metadata
@@ -101,11 +101,11 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, [],
     exclude_binaries=True,
-    name="TripVideo",
+    name="Memowheel",
     # Windowless: no console flashes on launch. The app lives in the system tray
     # (Open / View log / Quit) and everything that would have gone to the console
-    # is captured to data/logs/tripvideo.log, viewable from the kebab menu.
+    # is captured to data/logs/memowheel.log, viewable from the kebab menu.
     console=False,
     disable_windowed_traceback=False,
 )
-coll = COLLECT(exe, a.binaries, a.datas, name="TripVideo")
+coll = COLLECT(exe, a.binaries, a.datas, name="Memowheel")

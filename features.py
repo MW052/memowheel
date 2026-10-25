@@ -39,8 +39,8 @@ FEATURES = [
         "name": "Occasion Video",
         "emoji": "🎂",
         "desc": "A video from photos for a birthday, anniversary, or memorial.",
-        "status": "soon",
-        "url": None,
+        "status": "available",
+        "url": "/occasion",
     },
     # Face Morph is being developed separately - intentionally not shown on the hub.
 ]

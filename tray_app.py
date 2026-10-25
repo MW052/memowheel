@@ -3,7 +3,7 @@ small icon in the system tray (Open / View log / Quit).
 
 This is the default way a non-technical user runs the app - double-clicking a
 launcher that calls this via `pythonw` (or the frozen windowed exe) shows no
-terminal at all. Because there's no console, logs go to data/logs/tripvideo.log
+terminal at all. Because there's no console, logs go to data/logs/memowheel.log
 (see runtime_log), viewable from the app's kebab menu -> "View log".
 
 Run directly for development:  py tray_app.py   (or: py manage.py tray)

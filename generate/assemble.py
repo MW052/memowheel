@@ -24,6 +24,7 @@ media meet at a shared neutral point (DESIGN.md: "cross-dissolves between
 segments", gentle motion).
 """
 
+import io
 import multiprocessing as mp
 import os
 import shutil
@@ -37,7 +38,7 @@ from pathlib import Path
 from imageio_ffmpeg import get_ffmpeg_exe
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 from bidi.algorithm import get_display
 
 from moviepy import (
@@ -57,7 +58,7 @@ from proglog import ProgressBarLogger
 
 from generate.pacing import item_duration, DEFAULT_PHOTO_DURATION
 from ingest.image_utils import load_corrected_rgb, apply_crop
-from config import get_setting, get_bool, ordered_music_files
+from config import get_setting, get_bool, set_setting, ordered_music_files
 import paths
 
 OUTPUT_DIR = paths.data_path("output")
@@ -140,6 +141,46 @@ VIDEO_STYLES = {
     "minimal": {  # clean, near-white, humanist sans
         "title_bg": (250, 250, 248), "title_text": "#2B2724", "title_font": CAPTION_FONT,
         "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO,
+    },
+    # Occasion styles: each occasion type offers three (occasion.OCCASION_STYLES).
+    # They add a `rule` accent hairline under the title so each trio reads
+    # distinctly; trips never set `rule`, so trip title cards are unchanged.
+    "bd_warm":   {  # Birthday - warm cream, terracotta rule
+        "title_bg": (247, 241, 230), "title_text": "#2B2724", "title_font": TITLE_FONT,
+        "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO, "rule": "#C0392B",
+    },
+    "bd_night":  {  # Birthday - festive espresso, gold rule
+        "title_bg": (36, 31, 27), "title_text": CREAM, "title_font": TITLE_FONT,
+        "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO, "rule": "#C89A3C",
+    },
+    "bd_bright": {  # Birthday - bright near-white, terracotta rule
+        "title_bg": (250, 250, 248), "title_text": "#2B2724", "title_font": TITLE_FONT,
+        "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO, "rule": "#C0392B",
+    },
+    "an_classic": {  # Anniversary - cream, slate-indigo rule
+        "title_bg": (247, 241, 230), "title_text": "#2B2724", "title_font": TITLE_FONT,
+        "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO, "rule": "#3E5C76",
+    },
+    "an_romance": {  # Anniversary - espresso, rose rule
+        "title_bg": (36, 31, 27), "title_text": CREAM, "title_font": TITLE_FONT,
+        "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO, "rule": "#B5756A",
+    },
+    "an_gold":    {  # Anniversary - cream, gold rule
+        "title_bg": (247, 241, 230), "title_text": "#2B2724", "title_font": TITLE_FONT,
+        "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO, "rule": "#C89A3C",
+    },
+    # Memorial themes (DESIGN.md, Direction M) - the reverent trio.
+    "mem_slate": {  # Slate dusk: espresso card, cream serif, slate-indigo rule
+        "title_bg": (36, 31, 27), "title_text": CREAM, "title_font": TITLE_FONT,
+        "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO, "rule": "#3E5C76",
+    },
+    "mem_evergreen": {  # Evergreen: linen card, ink serif, muted evergreen rule
+        "title_bg": (239, 237, 232), "title_text": "#241F1B", "title_font": TITLE_FONT,
+        "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO, "rule": "#55685C",
+    },
+    "mem_candle": {  # Candlelight: espresso card, cream serif, candle-brass rule
+        "title_bg": (36, 31, 27), "title_text": CREAM, "title_font": TITLE_FONT,
+        "caption_color": CREAM, "scrim_color": SCRIM_ESPRESSO, "rule": "#B59A62",
     },
 }
 
@@ -282,17 +323,85 @@ def _text_overlay(clip, text: str, position: tuple, font_size: int, box_height: 
     return CompositeVideoClip(layers)
 
 
-def _title_slide(text: str, duration: float):
+def _hex_rgb(h: str) -> tuple:
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _title_text_clip(text: str, font: str, font_size: int, box_height: int,
+                     color: str, duration: float):
+    """The centered title TextClip (same look as _text_overlay's title path),
+    built standalone so decorations can sit BEHIND it and the text stays sharp."""
+    return (TextClip(
+        text=_rtl(text), font=font, font_size=font_size, color=color,
+        stroke_color=color, stroke_width=0, method="caption",
+        size=(CAPTION_MAX_WIDTH, box_height), text_align="center",
+        vertical_align="center",
+    ).with_duration(duration).with_position(("center", "center"), relative=True))
+
+
+def _cover_array(data: bytes):
+    """Decode cover bytes to an EXIF-corrected RGB array that fills (cover-crops)
+    the title canvas exactly, so the photo bleeds to the edges."""
+    img = Image.open(io.BytesIO(data))
+    img = ImageOps.exif_transpose(img).convert("RGB")
+    img = ImageOps.fit(img, MAX_RENDER_SIZE, method=Image.LANCZOS)
+    return np.asarray(img)
+
+
+def _title_slide(text: str, duration: float, decor: str | None = None,
+                 cover: bytes | None = None):
     if not text:
         return None
-    # Title card colours + font come from the selected video style (Settings).
+    # Title card colours + font come from the selected video style (Settings, or
+    # the occasion's chosen style).
     style = _active_style()
-    background = ColorClip(size=MAX_RENDER_SIZE, color=style["title_bg"]).with_duration(duration)
-    return _text_overlay(
-        background, text, ("center", "center"), TITLE_FONT_SIZE, TITLE_BOX_HEIGHT,
-        font=style["title_font"], color=style["title_text"],
-        stroke_color=style["title_text"], stroke_width=0,
-    )
+    w, h = MAX_RENDER_SIZE
+    title_color = style["title_text"]
+    scrim = False
+
+    if cover:
+        # A user cover photo fills the card. Force cream text on a soft espresso
+        # scrim so the title stays legible over any photo; fall back to the solid
+        # card if the image can't be decoded.
+        try:
+            background = ImageClip(_cover_array(cover)).with_duration(duration)
+            title_color, scrim = CREAM, True
+        except Exception:
+            background = ColorClip(size=MAX_RENDER_SIZE, color=style["title_bg"]).with_duration(duration)
+    else:
+        background = ColorClip(size=MAX_RENDER_SIZE, color=style["title_bg"]).with_duration(duration)
+    layers = [background]
+
+    # Occasion decorations (balloons / hearts / …) on intro & outro cards only.
+    # Layered behind the title so the words stay fully legible; never fatal.
+    if decor:
+        try:
+            from generate.overlays import make_decor_clip
+            ov = make_decor_clip(decor, MAX_RENDER_SIZE, duration)
+            if ov is not None:
+                layers.append(ov)
+        except Exception:
+            pass
+
+    if scrim:
+        layers.append(ColorClip(size=(CAPTION_MAX_WIDTH, TITLE_BOX_HEIGHT), color=SCRIM_ESPRESSO)
+                      .with_opacity(0.5).with_duration(duration)
+                      .with_position(("center", "center"), relative=True))
+
+    layers.append(_title_text_clip(
+        text, style["title_font"], TITLE_FONT_SIZE, TITLE_BOX_HEIGHT,
+        title_color, duration))
+
+    # Occasion styles add a short accent hairline below the title; other styles
+    # have no `rule`, so this never touches a trip.
+    rule = style.get("rule")
+    if rule:
+        layers.append(ColorClip(size=(max(40, round(w * 0.10)), max(2, round(h * 0.004))),
+                                color=_hex_rgb(rule))
+                      .with_duration(duration)
+                      .with_position(("center", round(h * 0.60))))
+    return CompositeVideoClip(layers)
 
 
 def _build_item_clip(row, show_place_tag: bool, motion: str = "fade",
@@ -529,13 +638,165 @@ def _build_spec(spec, motion, photo_seconds):
     just its slice - so a given process decodes ONLY the photos it actually renders.
     That bounded per-process footprint is the point of the plan/spec split."""
     if spec["kind"] == "title":
-        return _title_slide(spec["text"], spec["duration"])
+        return _title_slide(spec["text"], spec["duration"], spec.get("decor"), spec.get("cover"))
     clip, _dur, _has, _native = _build_item_clip(
         spec["row"], spec["show_place_tag"], motion, photo_seconds)
     return clip
 
 
-def _plan(conn, progress_cb=None):
+def _emit_title(text: str, duration: float, current_track, decor: str | None = None,
+                cover: bytes | None = None):
+    """A title-card spec + its audio segment (the music bed plays over the card,
+    no native audio). `decor` names an optional decoration (balloons / hearts / …)
+    drawn behind the title; `cover` is optional photo bytes that fill the card
+    behind the text. Both are used on occasion intro & outro cards only. Shared by
+    every maker's planner."""
+    spec = {"kind": "title", "text": text, "duration": duration}
+    if decor:
+        spec["decor"] = decor
+    if cover:
+        spec["cover"] = cover
+    segment = (_snap(duration), False, None, current_track)
+    return spec, segment
+
+
+def _emit_item(row, show_place_tag: bool, motion: str, photo_seconds: float,
+               current_track):
+    """An item spec + its audio segment, maker-agnostic. A video is opened ONCE
+    here to capture its exact duration + native audio for the soundtrack; a
+    photo's duration comes from settings (no decode). The visual is rebuilt in
+    whichever process renders this segment. Returns (spec, segment, is_clip)."""
+    if row["item_type"] == "photo":
+        duration = _snap(item_duration("photo", row["duration_override"],
+                                       photo_default=photo_seconds))
+        has_own_audio, native_audio = False, None
+        is_clip = False
+    else:
+        _vis, duration, has_own_audio, native_audio = _build_item_clip(
+            row, show_place_tag, motion, photo_seconds)
+        is_clip = True
+    spec = {"kind": "item", "row": {k: row[k] for k in row.keys()},
+            "show_place_tag": show_place_tag}
+    segment = (duration, has_own_audio, native_audio, current_track)
+    return spec, segment, is_clip
+
+
+def _plan(conn, kind: str = "trip", progress_cb=None):
+    """Dispatch to the maker-specific planner and return its plan.
+
+    Every planner returns the SAME 6-tuple
+    (specs, audio_segments, motion, photo_seconds, n_photos, n_clips); everything
+    downstream (clip build, audio bed, keyframing, parallel render) is generic
+    over that contract and knows nothing about days, places, or years. A planner
+    decides only the narrative: order, title cards, per-item tags, and the music
+    track in force - calling the shared `_emit_title`/`_emit_item` for the
+    mechanics. Trip plans by day + place + moment; Occasion by calendar year
+    (docs/specs/occasion-video.md)."""
+    if kind == "occasion":
+        return _plan_occasion(conn, progress_cb)
+    return _plan_trip(conn, progress_cb)
+
+
+# Festive decoration drawn on an occasion's intro & outro cards, keyed on the
+# chosen style/mood (occasion.OCCASION_STYLES) so the user's pick selects it.
+# Memorial styles are absent -> undecorated (reverent, per DESIGN.md). Decoration
+# names match generate/overlays.py.
+_STYLE_DECOR = {
+    "bd_warm": "balloons", "bd_night": "fireworks", "bd_bright": "confetti",
+    "an_classic": "hearts", "an_romance": "hearts", "an_gold": "confetti",
+}
+
+
+def _plan_occasion(conn, progress_cb=None):
+    """Occasion Video planner (docs/specs/occasion-video.md): calendar-year
+    sections, framing slides from the `occasion` facet, and NO place axis.
+
+    Reuses the exact catalog shape and ordering as the trip planner - sections
+    are clusters whose `trip_day` is a "YYYY-01-01" sort key and whose label is
+    the `day_captions` text (the year, user-renamable). The differences from a
+    trip are purely narrative, which is what the planner seam is for:
+      - section title = the year label verbatim (not a formatted date header),
+      - no per-item place tag,
+      - intro/outro come from the occasion facet, not `trip_intro`."""
+    rows = conn.execute(_ITEMS_SQL).fetchall()
+    if not rows:
+        raise ValueError("no items included - nothing to generate")
+
+    specs = []
+    audio_segments = []
+
+    # Soundtrack: playlist across all tracks (2+) or the single track; occasion
+    # projects place no per-moment cues, so there is no CUED mode here.
+    track_paths = ordered_music_files(get_setting("music_dir", str(MUSIC_DIR)))
+    current_track = track_paths if len(track_paths) >= 2 else (track_paths[0] if track_paths else None)
+
+    # Framing lives in trip_intro (shared by both makers), so the review
+    # Opening/Closing editors drive it. The occasion wizard seeds it from the
+    # headline + dedication (opening) and the closing message.
+    intro_row = conn.execute(
+        "SELECT intro_text, outro_text FROM trip_intro WHERE id = 1"
+    ).fetchone()
+    intro_text = (intro_row["intro_text"] if intro_row else "") or ""
+    closing = (intro_row["outro_text"] if intro_row else "") or ""
+
+    # A festive decoration on the intro & outro cards. The user's choice wins:
+    # 'auto' follows the style/mood, 'none' turns it off, else a specific motif.
+    # Plus the optional user cover photo behind each framing card.
+    frow = conn.execute(
+        "SELECT theme, decor, intro_cover, outro_cover FROM occasion WHERE id = 1"
+    ).fetchone()
+    pref = (frow["decor"] if frow else "auto") or "auto"
+    if pref == "auto":
+        decor = _STYLE_DECOR.get((frow["theme"] if frow else "") or "")
+    elif pref == "none":
+        decor = None
+    else:
+        decor = pref
+    intro_cover = frow["intro_cover"] if frow else None
+    outro_cover = frow["outro_cover"] if frow else None
+
+    if intro_text.strip():
+        spec, segment = _emit_title(intro_text, INTRO_DURATION, current_track, decor, intro_cover)
+        specs.append(spec)
+        audio_segments.append(segment)
+
+    motion = get_setting("motion_style", "fade")
+    try:
+        photo_seconds = float(get_setting("photo_duration_seconds", DEFAULT_PHOTO_DURATION))
+    except (TypeError, ValueError):
+        photo_seconds = DEFAULT_PHOTO_DURATION
+
+    n_photos = n_clips = 0
+    seen_sections = set()
+    for idx, row in enumerate(rows, start=1):
+        if progress_cb is not None:
+            progress_cb(idx, len(rows), f"Preparing your video… ({idx}/{len(rows)})")
+
+        key = row["trip_day"]
+        if key is not None and key not in seen_sections:
+            seen_sections.add(key)
+            label = (row["day_caption"] or "").strip()
+            if label:
+                spec, segment = _emit_title(label, DAY_INTRO_DURATION, current_track)
+                specs.append(spec)
+                audio_segments.append(segment)
+
+        # No place axis for an occasion: items never carry a place tag.
+        spec, segment, is_clip = _emit_item(row, False, motion, photo_seconds, current_track)
+        specs.append(spec)
+        audio_segments.append(segment)
+        n_clips += is_clip
+        n_photos += not is_clip
+
+    if closing.strip():
+        spec, segment = _emit_title(closing.strip(), OUTRO_DURATION, current_track, decor, outro_cover)
+        specs.append(spec)
+        audio_segments.append(segment)
+
+    return specs, audio_segments, motion, photo_seconds, n_photos, n_clips
+
+
+def _plan_trip(conn, progress_cb=None):
     """Cheap planning pass: the ordered list of clip SPECS (picklable build
     instructions) and the parallel audio-segment list - WITHOUT decoding any photo.
     A spec is either a title card (text + duration) or an item (its catalog row +
@@ -592,8 +853,9 @@ def _plan(conn, progress_cb=None):
     ).fetchone()
     intro_text = (intro_row["intro_text"] if intro_row else "") or ""
     if intro_text:
-        specs.append({"kind": "title", "text": intro_text, "duration": INTRO_DURATION})
-        audio_segments.append((_snap(INTRO_DURATION), False, None, current_track))
+        spec, segment = _emit_title(intro_text, INTRO_DURATION, current_track)
+        specs.append(spec)
+        audio_segments.append(segment)
 
     motion = get_setting("motion_style", "fade")  # fade | static | ken_burns
     try:
@@ -621,33 +883,25 @@ def _plan(conn, progress_cb=None):
             seen_days.add(row["trip_day"])
             day_header = _format_day_header(row["trip_day"], row["day_caption"] or "")
             if day_header:
-                specs.append({"kind": "title", "text": day_header, "duration": DAY_INTRO_DURATION})
-                audio_segments.append((_snap(DAY_INTRO_DURATION), False, None, current_track))
+                spec, segment = _emit_title(day_header, DAY_INTRO_DURATION, current_track)
+                specs.append(spec)
+                audio_segments.append(segment)
 
         if row["cluster_id"] is not None:
             seen_clusters.add(row["cluster_id"])
 
-        if row["item_type"] == "photo":
-            # Photo duration comes from settings - no image decode needed here.
-            duration = _snap(item_duration("photo", row["duration_override"], photo_default=photo_seconds))
-            has_own_audio, native_audio = False, None
-            n_photos += 1
-        else:
-            # Open the video ONCE here for its exact duration + native audio (the
-            # soundtrack needs both, and it stays referenced via audio_segments); the
-            # visual is rebuilt in whichever process renders this segment.
-            _vis, duration, has_own_audio, native_audio = _build_item_clip(
-                row, is_first_of_cluster, motion, photo_seconds)
-            n_clips += 1
-
-        specs.append({"kind": "item", "row": {k: row[k] for k in row.keys()},
-                      "show_place_tag": is_first_of_cluster})
-        audio_segments.append((duration, has_own_audio, native_audio, current_track))
+        spec, segment, is_clip = _emit_item(
+            row, is_first_of_cluster, motion, photo_seconds, current_track)
+        specs.append(spec)
+        audio_segments.append(segment)
+        n_clips += is_clip
+        n_photos += not is_clip
 
     outro_text = (intro_row["outro_text"] if intro_row else "") or ""
     if outro_text:
-        specs.append({"kind": "title", "text": outro_text, "duration": OUTRO_DURATION})
-        audio_segments.append((_snap(OUTRO_DURATION), False, None, current_track))
+        spec, segment = _emit_title(outro_text, OUTRO_DURATION, current_track)
+        specs.append(spec)
+        audio_segments.append(segment)
 
     return specs, audio_segments, motion, photo_seconds, n_photos, n_clips
 
@@ -822,7 +1076,7 @@ def _render_final_parallel(specs, audio, durations, motion, photo_seconds,
 
 
 def generate_video(conn, progress_cb=None, mode: str = "final", basename: str | None = None,
-                   render_parallel: bool | None = None) -> Path:
+                   render_parallel: bool | None = None, kind: str = "trip") -> Path:
     """Render the film. mode='draft' is a fast, small-canvas single-pass preview;
     mode='final' renders full 1080p (the encode is producer-bound - single-threaded
     frame generation - so splitting it across processes is the real speedup).
@@ -839,11 +1093,22 @@ def generate_video(conn, progress_cb=None, mode: str = "final", basename: str | 
     draft = mode == "draft"
     scale = DRAFT_SCALE if draft else 1.0
 
+    # A memorial occasion renders in its chosen theme. The theme is a VIDEO_STYLES
+    # key; _active_style() (incl. render workers) reads it from the `video_style`
+    # setting, so override that for this render and restore it after.
+    _prev_style = None
+    if kind == "occasion":
+        row = conn.execute("SELECT theme FROM occasion WHERE id = 1").fetchone()
+        theme = (row["theme"] if row else "") or ""
+        if theme in VIDEO_STYLES:
+            _prev_style = get_setting("video_style", "keepsake")
+            set_setting("video_style", theme)
+
     _t_build_start = time.perf_counter()
     _apply_render_scale(scale)
     try:
         render_size = TARGET_SIZE  # captured before the finally resets it to 1080p
-        specs, audio_segments, motion, photo_seconds, n_photos, n_clips = _plan(conn, progress_cb)
+        specs, audio_segments, motion, photo_seconds, n_photos, n_clips = _plan(conn, kind, progress_cb)
 
         if progress_cb is not None:
             progress_cb(0, 0, "Adding titles and music…")
@@ -855,7 +1120,7 @@ def generate_video(conn, progress_cb=None, mode: str = "final", basename: str | 
 
         output_dir = Path(get_setting("output_dir", str(OUTPUT_DIR)))
         if basename is None:
-            basename = get_setting("output_basename", "trip_video")
+            basename = get_setting("output_basename", "memowheel")
         output_dir.mkdir(parents=True, exist_ok=True)
         suffix = "_draft" if draft else ""
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -899,6 +1164,8 @@ def generate_video(conn, progress_cb=None, mode: str = "final", basename: str | 
         _t_end = time.perf_counter()
     finally:
         _apply_render_scale(1.0)  # never leave the module in draft geometry
+        if _prev_style is not None:
+            set_setting("video_style", _prev_style)  # restore the user's trip style
 
     build_s = _t_assemble_start - _t_build_start
     assemble_s = _t_encode_start - _t_assemble_start

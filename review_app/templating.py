@@ -24,7 +24,9 @@ def app_context(request) -> dict:
     else:
         basename = (config.get_setting("output_basename", "trip") or "trip").strip()
         trip_name = basename.replace("_", " ").replace("-", " ").title() or "Trip"
-    return {"app_name": APP_NAME, "app_version": APP_VERSION, "trip_name": trip_name}
+    kind = project_store.project_kind(proj["id"]) if proj else "trip"
+    return {"app_name": APP_NAME, "app_version": APP_VERSION, "trip_name": trip_name,
+            "project_kind": kind}
 
 
 def asset_ver(filename: str) -> int:

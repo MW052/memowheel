@@ -102,6 +102,22 @@ CREATE TABLE IF NOT EXISTS trip_intro (
                                             -- frame of the video (editable in UI)
 );
 
+-- Occasion Video facet (single row, like trip_intro). Only used by projects of
+-- kind 'occasion' (docs/specs/occasion-video.md); harmless and empty otherwise.
+-- The honoree/headline/dedication/closing drive the occasion's framing slides.
+CREATE TABLE IF NOT EXISTS occasion (
+    id            INTEGER PRIMARY KEY CHECK (id = 1),
+    occasion_type TEXT NOT NULL DEFAULT 'birthday',  -- 'birthday' | 'anniversary' | 'memorial'
+    honoree       TEXT NOT NULL DEFAULT '',          -- person label(s) / group name
+    headline      TEXT NOT NULL DEFAULT '',          -- e.g. "Happy 60th, Dad"
+    dedication    TEXT NOT NULL DEFAULT '',           -- opening slide
+    closing       TEXT NOT NULL DEFAULT '',           -- closing slide
+    theme         TEXT NOT NULL DEFAULT '',           -- style key (VIDEO_STYLES); '' = default
+    intro_cover   BLOB,                               -- optional cover photo behind the opening card
+    outro_cover   BLOB,                               -- optional cover photo behind the closing card
+    decor         TEXT NOT NULL DEFAULT 'auto'        -- intro/outro animation: auto|none|balloons|fireworks|confetti|hearts
+);
+
 CREATE TABLE IF NOT EXISTS skipped_files (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     path TEXT NOT NULL,
@@ -122,6 +138,17 @@ def _apply_migrations(conn: sqlite3.Connection) -> None:
     intro_cols = {row["name"] for row in conn.execute("PRAGMA table_info(trip_intro)")}
     if "outro_text" not in intro_cols:
         conn.execute("ALTER TABLE trip_intro ADD COLUMN outro_text TEXT NOT NULL DEFAULT ''")
+
+    # Memorial theme on the occasion facet (added after the table first shipped).
+    occ_cols = {row["name"] for row in conn.execute("PRAGMA table_info(occasion)")}
+    if occ_cols and "theme" not in occ_cols:
+        conn.execute("ALTER TABLE occasion ADD COLUMN theme TEXT NOT NULL DEFAULT ''")
+    if occ_cols and "intro_cover" not in occ_cols:
+        conn.execute("ALTER TABLE occasion ADD COLUMN intro_cover BLOB")
+    if occ_cols and "outro_cover" not in occ_cols:
+        conn.execute("ALTER TABLE occasion ADD COLUMN outro_cover BLOB")
+    if occ_cols and "decor" not in occ_cols:
+        conn.execute("ALTER TABLE occasion ADD COLUMN decor TEXT NOT NULL DEFAULT 'auto'")
 
     # Light editing (lightbox): per-item photo rotation and clip in/out points.
     item_cols = {row["name"] for row in conn.execute("PRAGMA table_info(items)")}

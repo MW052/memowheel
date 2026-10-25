@@ -18,6 +18,10 @@ import os
 
 import config
 
+# Windows Credential Manager service name. Deliberately kept as the original
+# "TripVideo" across the Memowheel rebrand: it's the lookup key for a user's
+# already-saved API key, so renaming it would orphan stored credentials and make
+# everyone re-enter their key. Internal id only; never shown in the UI.
 _SERVICE = "TripVideo"
 _ACCOUNT = "llm_api_key"
 _SETTING = "llm_api_key"  # legacy plaintext location in settings.json

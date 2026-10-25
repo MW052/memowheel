@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block title %}{{ t('occasion.new_title') }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+{% set blocked = people_count == 0 or index.photos == 0 %}
+<div class="wiz-shell occ-wiz">
+  <p class="kicker">{{ t('feature.occasion.name') }}</p>
+
+  {% if people_count == 0 %}
+  <div class="occ-note"><span>{{ t('occasion.need_people') }}</span>
+    <a class="btn btn-secondary" href="/people">{{ t('occasion.need_people_btn') }}</a></div>
+  {% endif %}
+  {% if index.photos == 0 %}
+  <div class="occ-note" id="occ-need-lib"><span>{{ t('occasion.need_library') }}</span>
+    <span class="occ-hint" style="margin:0">{{ t('occasion.need_library_media') }}</span></div>
+  {% endif %}
+
+  <form method="post" action="/occasion/new" class="occ-form" id="occ-form" enctype="multipart/form-data">
+
+    <section class="wstep active" data-step="1">
+      <div class="card-xl wiz-card">
+        <div class="step-head"><span class="step-badge">01</span><h2>{{ t('occasion.step_type') }}</h2></div>
+        <p class="step-sub">{{ t('occasion.step_type_sub') }}</p>
+
+        <div class="occ-types" role="radiogroup">
+          {% for ty in types %}
+          <label class="occ-chip">
+            <input type="radio" name="occasion_type" value="{{ ty }}" {{ 'checked' if loop.first }} onchange="occOnType()">
+            <span>{{ t('occasion.type.' + ty) }}</span>
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="occ-label" style="margin-top:18px">{{ t('occasion.style') }}</div>
+        {% for ty in types %}
+        <div class="occ-style-group" data-type="{{ ty }}" {{ '' if loop.first else 'hidden' }}>
+          <div class="occ-theme-grid">
+            {% for key in styles[ty] %}
+            {% set sw = swatches[key] %}
+            <label class="occ-theme" style="--card:{{ sw[0] }};--text:{{ sw[1] }};--rule:{{ sw[2] }}">
+              <input type="radio" name="theme" value="{{ key }}" {{ 'checked' if (loop.first and ty == types[0]) }}>
+              <span class="occ-theme-card">
+                {% if ty == 'memorial' and loop.index == 3 %}<span class="otc-dot"></span>{% endif %}
+                <span class="otc-kicker">{{ t('occasion.sample.' + ty) }}</span>
+                <span class="otc-name">{{ t('occasion.style.' + key) }}</span>
+                <span class="otc-rule"></span>
+              </span>
+              <span class="occ-theme-name">{{ t('occasion.style.' + key) }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+
+        <label class="occ-field" style="margin-top:18px">
+          <span class="occ-label">{{ t('occasion.anim') }}</span>
+          <select name="decor">
+            {% for d in decor_options %}
+            <option value="{{ d }}" {{ 'selected' if d == 'auto' }}>{{ t('occasion.anim.' + d) }}</option>
+            {% endfor %}
+          </select>
+          <span class="occ-hint" style="margin:0">{{ t('occasion.anim_hint') }}</span>
+        </label>
+
+        <div class="wiz-nav">
+          <span></span>
+          <button type="button" class="btn btn-primary btn-lg" onclick="occStep(2)">{{ t('setup.wiz.continue') }} &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="wstep" data-step="2">
+      <div class="card-xl wiz-card">
+        <div class="step-head"><span class="step-badge">02</span><h2>{{ t('occasion.step_media') }}</h2></div>
+        <p class="step-sub">{{ t('occasion.step_media_sub') }}</p>
+
+        <div class="occ-lib" id="occ-lib">
+          {% for d in libraries %}
+          <div class="occ-lib-row"><span dir="auto">{{ d }}</span>
+            <button type="button" class="btn btn-ghost" onclick="occLibRemove(this)">{{ t('occasion.media_remove') }}</button></div>
+          {% endfor %}
+          <p class="occ-empty" id="occ-lib-empty" {{ 'hidden' if libraries }}>{{ t('occasion.media_none') }}</p>
+        </div>
+        <button type="button" class="add-dashed" onclick="occAddFolder()"><span class="add-plus">+</span> {{ t('occasion.media_add') }}</button>
+
+        <div class="occ-index">
+          <span id="occ-index-status">{{ t('occasion.media_indexed', n=index.photos) }}</span>
+          <button type="button" class="btn btn-secondary" id="occ-index-btn" onclick="occReindex()">{{ t('occasion.media_index_btn') }}</button>
+        </div>
+
+        <div class="wiz-nav">
+          <button type="button" class="btn btn-secondary" onclick="occStep(1)">&larr; {{ t('setup.wiz.back') }}</button>
+          <button type="button" class="btn btn-primary btn-lg" onclick="occStep(3)">{{ t('setup.wiz.continue') }} &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="wstep" data-step="3">
+      <div class="card-xl wiz-card">
+        <div class="step-head"><span class="step-badge">03</span><h2>{{ t('occasion.step_who') }}</h2></div>
+        <p class="step-sub">{{ t('occasion.step_who_sub') }}</p>
+
+        <label class="occ-field">
+          <span class="occ-label">{{ t('occasion.for') }}</span>
+          <input type="text" name="honoree" id="occ-honoree" list="occ-targets" dir="auto"
+                 placeholder="{{ t('occasion.for_ph') }}" autocomplete="off">
+          <datalist id="occ-targets">
+            {% for tgt in targets %}<option value="{{ tgt.name }}">{% endfor %}
+          </datalist>
+          <span class="occ-err" id="occ-honoree-err" hidden>{{ t('occasion.need_honoree') }}</span>
+        </label>
+
+        <label class="occ-field">
+          <span class="occ-label">{{ t('occasion.sensitivity') }}</span>
+          <select name="tier">
+            {% for tr in tiers %}
+            <option value="{{ tr }}" {{ 'selected' if tr == 'balanced' }}>{{ t('occasion.tier.' + tr) }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <div class="wiz-nav">
+          <button type="button" class="btn btn-secondary" onclick="occStep(2)">&larr; {{ t('setup.wiz.back') }}</button>
+          <button type="button" class="btn btn-primary btn-lg" onclick="occNextWho()">{{ t('setup.wiz.continue') }} &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="wstep" data-step="4">
+      <div class="card-xl wiz-card">
+        <div class="step-head"><span class="step-badge">04</span><h2>{{ t('occasion.step_words') }}</h2></div>
+        <p class="step-sub">{{ t('occasion.step_words_sub') }}</p>
+
+        <label class="occ-field">
+          <span class="occ-label">{{ t('occasion.headline') }}</span>
+          <input type="text" name="headline" dir="auto" placeholder="{{ t('occasion.headline_ph') }}">
+        </label>
+        <label class="occ-field">
+          <span class="occ-label">{{ t('occasion.dedication') }}</span>
+          <textarea name="dedication" rows="2" dir="auto" placeholder="{{ t('occasion.dedication_ph') }}"></textarea>
+        </label>
+        <label class="occ-field">
+          <span class="occ-label">{{ t('occasion.closing') }}</span>
+          <textarea name="closing" rows="2" dir="auto" placeholder="{{ t('occasion.closing_ph') }}"></textarea>
+        </label>
+
+        <div class="occ-covers">
+          <label class="occ-field">
+            <span class="occ-label">{{ t('occasion.cover_intro') }}</span>
+            <input type="file" name="intro_cover" accept="image/*">
+          </label>
+          <label class="occ-field">
+            <span class="occ-label">{{ t('occasion.cover_outro') }}</span>
+            <input type="file" name="outro_cover" accept="image/*">
+          </label>
+        </div>
+        <p class="occ-hint">{{ t('occasion.cover_hint') }}</p>
+
+        <div class="wiz-nav">
+          <button type="button" class="btn btn-secondary" onclick="occStep(3)">&larr; {{ t('setup.wiz.back') }}</button>
+          <button type="button" class="btn btn-primary btn-lg" onclick="occStep(5)">{{ t('setup.wiz.continue') }} &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="wstep" data-step="5">
+      <div class="card-xl wiz-card">
+        <div class="step-head"><span class="step-badge">05</span><h2>{{ t('occasion.step_music') }}</h2></div>
+        <p class="step-sub">{{ t('occasion.step_music_sub') }}</p>
+
+        <div id="occ-music-list">
+          {% for name in music_tracks %}
+          <div class="music-row" data-name="{{ name }}">
+            <span class="music-name" dir="auto">{{ name }}</span>
+            <audio controls preload="none" src="/media/music/{{ name | urlencode }}"></audio>
+            <span class="music-actions">
+              <button type="button" onclick='occMusicMove({{ name | tojson }}, -1)' title="{{ t('setup.move_up') }}">&#9650;</button>
+              <button type="button" onclick='occMusicMove({{ name | tojson }}, 1)' title="{{ t('setup.move_down') }}">&#9660;</button>
+              <button type="button" onclick='occMusicDelete({{ name | tojson }})'>{{ t('setup.remove') }}</button>
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        <p class="occ-hint" id="occ-music-empty" {{ 'hidden' if music_tracks }}>{{ t('occasion.music_none') }}</p>
+
+        <div class="row-form" style="margin-top:12px">
+          <input type="file" id="occ-music-file" accept="audio/mpeg,.mp3" multiple class="file-native" onchange="occShowChosen(this)">
+          <label for="occ-music-file" class="btn btn-secondary file-btn">{{ t('setup.choose_file') }}</label>
+          <span class="file-chosen" id="occ-music-chosen" data-empty="{{ t('setup.no_file_chosen') }}">{{ t('setup.no_file_chosen') }}</span>
+          <button type="button" class="btn btn-secondary" onclick="occMusicUpload()">{{ t('setup.add_music') }}</button>
+        </div>
+        <p class="occ-hint">{{ t('occasion.music_hint') }}</p>
+
+        <p class="occ-gather-note">{{ t('occasion.gather_note') }}</p>
+        <div class="wiz-nav">
+          <button type="button" class="btn btn-secondary" onclick="occStep(4)">&larr; {{ t('setup.wiz.back') }}</button>
+          <button type="submit" class="btn btn-primary btn-lg" id="occ-submit" {{ 'disabled' if blocked }}>
+            {{ t('occasion.create') }} &rarr;
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </form>
+  {% include "_folderpicker.html" %}
+</div>
+{% endblock %}
+{% block script %}
+<script>
+function occStep(n){
+  document.querySelectorAll('.wstep').forEach(s => s.classList.toggle('active', +s.dataset.step === n));
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+// When the occasion type changes, show that type's style group and select its
+// first style (so exactly one theme, belonging to the chosen type, is submitted).
+function occOnType(){
+  const sel = document.querySelector('input[name=occasion_type]:checked');
+  const type = sel ? sel.value : null;
+  document.querySelectorAll('input[name=theme]').forEach(r => r.checked = false);
+  document.querySelectorAll('.occ-style-group').forEach(g => {
+    const on = g.dataset.type === type;
+    g.hidden = !on;
+    if(on){ const first = g.querySelector('input[name=theme]'); if(first) first.checked = true; }
+  });
+}
+function occNextWho(){
+  const h = document.getElementById('occ-honoree');
+  const err = document.getElementById('occ-honoree-err');
+  if(!h.value.trim()){ err.hidden = false; h.focus(); return; }
+  err.hidden = true; occStep(4);
+}
+document.getElementById('occ-honoree').addEventListener('input', () => {
+  document.getElementById('occ-honoree-err').hidden = true;
+});
+document.getElementById('occ-form').addEventListener('submit', function(e){
+  const h = document.getElementById('occ-honoree');
+  if(!h.value.trim()){ e.preventDefault(); occStep(3); document.getElementById('occ-honoree-err').hidden = false; h.focus(); return; }
+  const b = document.getElementById('occ-submit');
+  if(!b.disabled){ b.disabled = true; b.textContent = window.t('occasion.working', 'Gathering photos…'); }
+});
+
+// ----- Step 2: add media (contributor folders), reusing the library/index API -----
+const occPeopleOk = {{ 'true' if people_count else 'false' }};
+function occLibRow(path){
+  const row = document.createElement('div'); row.className = 'occ-lib-row';
+  const s = document.createElement('span'); s.dir = 'auto'; s.textContent = path;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost';
+  b.textContent = window.t('occasion.media_remove'); b.onclick = () => occLibRemove(b);
+  row.append(s, b); return row;
+}
+function occAddFolder(){
+  window.openFolderPicker(async (path) => {
+    const r = await fetch('/gallery/libraries/add', {method:'POST', body:new URLSearchParams({folder:path})});
+    if(!r.ok) return;
+    document.getElementById('occ-lib-empty').hidden = true;
+    const lib = document.getElementById('occ-lib');
+    lib.insertBefore(occLibRow(path), document.getElementById('occ-lib-empty'));
+    occReindex();  // index the new folder so the gather can find matches in it
+  });
+}
+async function occLibRemove(btn){
+  const row = btn.closest('.occ-lib-row');
+  await fetch('/gallery/libraries/remove', {method:'POST', body:new URLSearchParams({folder:row.querySelector('span').textContent})});
+  row.remove();
+  if(!document.querySelector('.occ-lib-row')) document.getElementById('occ-lib-empty').hidden = false;
+}
+let occIndexing = false;
+async function occReindex(){
+  if(occIndexing) return;
+  const btn = document.getElementById('occ-index-btn');
+  const status = document.getElementById('occ-index-status');
+  const r = await fetch('/gallery/reindex', {method:'POST'});
+  if(!r.ok){ const d = await r.json().catch(()=>({})); status.textContent = d.detail || window.t('occasion.media_none'); return; }
+  occIndexing = true; btn.disabled = true;
+  const poll = async () => {
+    const s = await (await fetch('/gallery/reindex/status')).json();
+    if(s.state === 'running'){
+      status.textContent = window.tf('occasion.media_indexing', {done:s.done, total:(s.total||'…')});
+      setTimeout(poll, 700);
+    } else {
+      occIndexing = false; btn.disabled = false;
+      status.textContent = window.t('occasion.media_index_done');
+      const lib = document.getElementById('occ-need-lib'); if(lib) lib.hidden = true;
+      if(occPeopleOk){ const sub = document.getElementById('occ-submit'); if(sub) sub.disabled = false; }
+    }
+  };
+  poll();
+}
+
+// ----- Step 5: music (reuses the global /setup/music endpoints; refreshes in
+// place via /occasion/music so wizard state is never lost to a reload) -----
+function occShowChosen(input){
+  const span = document.getElementById('occ-music-chosen');
+  const files = [...(input.files || [])];
+  span.textContent = files.length ? files.map(f => f.name).join(', ') : span.dataset.empty;
+}
+function occMusicRows(){ return [...document.querySelectorAll('#occ-music-list .music-row')]; }
+function occMusicRender(names){
+  const list = document.getElementById('occ-music-list');
+  list.innerHTML = '';
+  names.forEach(name => {
+    const row = document.createElement('div'); row.className = 'music-row'; row.dataset.name = name;
+    const nm = document.createElement('span'); nm.className = 'music-name'; nm.dir = 'auto'; nm.textContent = name;
+    const au = document.createElement('audio'); au.controls = true; au.preload = 'none'; au.src = '/media/music/' + encodeURIComponent(name);
+    const acts = document.createElement('span'); acts.className = 'music-actions';
+    const up = document.createElement('button'); up.type = 'button'; up.textContent = '▲'; up.onclick = () => occMusicMove(name, -1);
+    const dn = document.createElement('button'); dn.type = 'button'; dn.textContent = '▼'; dn.onclick = () => occMusicMove(name, 1);
+    const rm = document.createElement('button'); rm.type = 'button'; rm.textContent = window.t('setup.remove'); rm.onclick = () => occMusicDelete(name);
+    acts.append(up, dn, rm); row.append(nm, au, acts); list.appendChild(row);
+  });
+  document.getElementById('occ-music-empty').hidden = names.length > 0;
+}
+async function occMusicRefresh(){
+  const d = await (await fetch('/occasion/music/list')).json();
+  occMusicRender(d.tracks || []);
+}
+async function occMusicUpload(){
+  const f = document.getElementById('occ-music-file');
+  if(!f.files || !f.files.length) return;
+  const fd = new FormData();
+  for(const file of f.files) fd.append('tracks', file);
+  const r = await fetch('/setup/music', {method:'POST', body:fd});
+  if(!r.ok){ const d = await r.json().catch(()=>({})); alert(d.detail || 'Upload failed'); return; }
+  f.value = ''; occShowChosen(f);
+  occMusicRefresh();
+}
+async function occMusicDelete(name){
+  if(!confirm(window.tf('setup.js.remove_confirm', {label:name}))) return;
+  await fetch('/setup/music/' + encodeURIComponent(name) + '/delete', {method:'POST'});
+  occMusicRefresh();
+}
+async function occMusicMove(name, dir){
+  const names = occMusicRows().map(r => r.dataset.name);
+  const i = names.indexOf(name), j = i + dir;
+  if(i < 0 || j < 0 || j >= names.length) return;
+  names.splice(i, 1); names.splice(j, 0, name);
+  const body = new URLSearchParams(); names.forEach(n => body.append('order', n));
+  await fetch('/setup/music/order', {method:'POST', body});
+  occMusicRefresh();
+}
+occOnType();
+</script>
+{% endblock %}

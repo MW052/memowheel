@@ -167,7 +167,7 @@ def output_basename() -> str:
     slug = re.sub(r"\s+", "_", slug).strip("_. ")[:60]
     if slug:
         return slug
-    return config.get_setting("output_basename", "trip_video") or "trip_video"
+    return config.get_setting("output_basename", "memowheel") or "memowheel"
 
 
 # ---- helpers ----
@@ -297,19 +297,35 @@ def ensure_current() -> None:
         adopt_current(base.replace("_", " ").replace("-", " ").title() or "My trip")
 
 
-def create_project(name: str) -> str:
-    """Save the current project, then start a fresh empty one (people kept)."""
+def create_project(name: str, kind: str = "trip") -> str:
+    """Save the current project, then start a fresh empty one (people kept).
+
+    `kind` is the maker: 'trip' (default) or 'occasion'. It is stored on the
+    registry record and drives which planner renders the film and which review
+    surface the project opens into (docs/specs/occasion-video.md). Records with
+    no `kind` are read as 'trip'."""
     save_current()
     _clear_live_keep_people()
     pid = _new_id()
     now = _now()
+    default_name = "Untitled occasion" if kind == "occasion" else "Untitled trip"
     rows = _load_registry()
-    rows.append({"id": pid, "name": (name or "").strip() or "Untitled trip",
-                 "created": now, "updated": now, "video": None})
+    rows.append({"id": pid, "name": (name or "").strip() or default_name,
+                 "kind": kind, "created": now, "updated": now, "video": None})
     _save_registry(rows)
     config.set_setting("current_project", pid)
     save_current()
     return pid
+
+
+def project_kind(pid: str | None) -> str:
+    """The maker a project belongs to: 'trip' (default) or 'occasion'. Records
+    created before `kind` existed are trips."""
+    return (get_project(pid) or {}).get("kind", "trip") or "trip"
+
+
+def current_kind() -> str:
+    return project_kind(current_id())
 
 
 def load_project(pid: str) -> bool:

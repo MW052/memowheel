@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ t('feature.occasion.name') }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="chooser">
+  <p class="kicker">{{ t('feature.occasion.name') }}</p>
+  <h1>{{ t('feature.occasion.name') }}</h1>
+  <p class="summary">{{ t('occasion.home_sub') }}</p>
+
+  {% if people_count == 0 %}
+  <div class="occ-note">
+    <span>{{ t('occasion.need_people') }}</span>
+    <a class="btn btn-secondary" href="/people">{{ t('occasion.need_people_btn') }}</a>
+  </div>
+  {% endif %}
+  {% if index.photos == 0 %}
+  <div class="occ-note">
+    <span>{{ t('occasion.need_library') }}</span>
+    <a class="btn btn-secondary" href="/gallery">{{ t('occasion.need_library_btn') }}</a>
+  </div>
+  {% endif %}
+
+  <div class="proj-section-label">{{ t('occasion.your') }}</div>
+  <div class="proj-list">
+    {% for p in projects %}
+    <div class="proj-row {{ 'is-current' if current and current.id == p.id }}">
+      <div class="proj-info">
+        <div class="proj-name" dir="auto">{{ p.name }}
+          {% if p.video %}<span class="proj-badge done">{{ t('projects.finished') }}</span>
+          {% else %}<span class="proj-badge wip">{{ t('projects.in_progress') }}</span>{% endif %}
+        </div>
+        <div class="proj-meta">{{ t('projects.updated', when=p.updated[:10]) }}</div>
+      </div>
+      <div class="proj-acts">
+        <form method="post" action="/projects/{{ p.id }}/open">
+          <button type="submit" class="btn btn-secondary">{{ t('projects.open') if p.video else t('projects.continue_btn') }}</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <p class="occ-empty">{{ t('occasion.none') }}</p>
+    {% endfor %}
+  </div>
+
+  <a class="add-dashed" href="/occasion/new">
+    <span class="add-plus">+</span> {{ t('occasion.new') }}
+  </a>
+</div>
+{% endblock %}

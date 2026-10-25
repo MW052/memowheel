@@ -281,7 +281,7 @@ drop-in swap, and a build where the helper is absent / non-Windows simply report
 
 The helper changes what gets built, but **adds no step to the end user's
 installation** — Memowheel ships as a PyInstaller one-folder build
-(`dist/TripVideo/TripVideo.exe` + `_internal/`), run from a launcher, not an MSI.
+(`dist/Memowheel/Memowheel.exe` + `_internal/`), run from a launcher, not an MSI.
 
 - **Build-time (developer):** install the **.NET SDK** to build the helper. This
   never reaches the user.
@@ -291,15 +291,15 @@ installation** — Memowheel ships as a PyInstaller one-folder build
   size (~10–70 MB), not an install step. (Never publish framework-dependent — that
   is the path that makes users install a runtime.)
 - **Bundle it like ffmpeg.** Drop `memowheel-device.exe` into `_internal/` (add it
-  to `packaging/trip_video.spec` `datas`); the app finds it via
+  to `packaging/memowheel.spec` `datas`); the app finds it via
   `paths.resource_path`. No COM registration, no user step — WPD is OS-provided.
 - **Code-signing.** A native exe that touches USB devices invites SmartScreen /
-  AV attention — **but `TripVideo.exe` is already an unsigned native exe with the
+  AV attention — **but `Memowheel.exe` is already an unsigned native exe with the
   same "unknown publisher" friction today**, so the helper is not a new *category*
   of problem, just one more binary. The helper is launched by the already-running
   app (not double-clicked), so it usually won't raise a *second* SmartScreen
   dialog; the realistic delta is AV heuristics on a device-touching exe. If/when
-  the product signs `TripVideo.exe`, **sign the helper with the same cert** in the
+  the product signs `Memowheel.exe`, **sign the helper with the same cert** in the
   same release step and both are clean.
 - **Fallback dep (only if going comtypes instead):** add `comtypes` to
   `requirements.txt` (note: `pywin32-ctypes`, already present, is unrelated) and a

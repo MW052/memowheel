@@ -48,12 +48,12 @@ Notes:
 ### A. Packaged app (for anyone — no Python, no setup)
 
 **⬇️ [Download the latest Windows build](https://github.com/MW052/memowheel/releases/latest)** —
-grab `TripVideo.zip`, unzip somewhere writable, and double-click `TripVideo.exe`.
+grab `Memowheel.zip`, unzip somewhere writable, and double-click `Memowheel.exe`.
 (A `.sha256` file is attached so you can verify the download.)
 
 A one-folder Windows build produced with PyInstaller. The recipient unzips
-`TripVideo` somewhere writable (Desktop, Documents — **not** `Program Files`)
-and double-clicks **`TripVideo.exe`**. It runs **windowless** with a
+`Memowheel` somewhere writable (Desktop, Documents — **not** `Program Files`)
+and double-clicks **`Memowheel.exe`**. It runs **windowless** with a
 **system-tray icon** (Open / View log / Quit) and opens the browser at the
 setup screen. All user data (catalog, `settings.json`, projects, music, output,
 reference photos, logs) is written to a **per-user folder kept separate from the
@@ -68,7 +68,7 @@ To build it (on a Windows box that already runs the app from source):
 powershell -ExecutionPolicy Bypass -File packaging\build.ps1
 ```
 
-That produces `dist\TripVideo\` (also copies the English/Hebrew user guides in).
+That produces `dist\Memowheel\` (also copies the English/Hebrew user guides in).
 See `packaging\README.md` for details and clean-machine caveats.
 
 ### B. From source (development)

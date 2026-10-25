@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{{ t('occasion.step_music') }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="wiz-shell">
+  <p class="kicker">{{ t('feature.occasion.name') }}</p>
+  <div class="card-xl wiz-card">
+    <div class="step-head"><h2>{{ t('occasion.step_music') }}</h2></div>
+    <p class="step-sub">{{ t('occasion.step_music_sub') }}</p>
+
+    <div id="omp-list">
+      {% for name in music_tracks %}
+      <div class="music-row" data-name="{{ name }}">
+        <span class="music-name" dir="auto">{{ name }}</span>
+        <audio controls preload="none" src="/media/music/{{ name | urlencode }}"></audio>
+        <span class="music-actions">
+          <button type="button" onclick='ompMove({{ name | tojson }}, -1)' title="{{ t('setup.move_up') }}">&#9650;</button>
+          <button type="button" onclick='ompMove({{ name | tojson }}, 1)' title="{{ t('setup.move_down') }}">&#9660;</button>
+          <button type="button" onclick='ompDelete({{ name | tojson }})'>{{ t('setup.remove') }}</button>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="occ-hint" id="omp-empty" {{ 'hidden' if music_tracks }}>{{ t('occasion.music_none') }}</p>
+
+    <div class="row-form" style="margin-top:12px">
+      <input type="file" id="omp-file" accept="audio/mpeg,.mp3" multiple class="file-native" onchange="ompChosen(this)">
+      <label for="omp-file" class="btn btn-secondary file-btn">{{ t('setup.choose_file') }}</label>
+      <span class="file-chosen" id="omp-chosen" data-empty="{{ t('setup.no_file_chosen') }}">{{ t('setup.no_file_chosen') }}</span>
+      <button type="button" class="btn btn-secondary" onclick="ompUpload()">{{ t('setup.add_music') }}</button>
+    </div>
+    <p class="occ-hint">{{ t('occasion.music_hint') }}</p>
+
+    <details class="music-sources">
+      <summary>{{ t('setup.free_music') }}</summary>
+      <p class="hint">{{ t('setup.free_music_hint') }}</p>
+      <ul>
+        <li><strong>{{ t('setup.no_credit') }}</strong>
+          <a href="https://studio.youtube.com" target="_blank" rel="noopener">YouTube Audio Library</a> ·
+          <a href="https://pixabay.com/music/" target="_blank" rel="noopener">Pixabay Music</a></li>
+        <li><strong>{{ t('setup.needs_credit') }}</strong>
+          <a href="https://freemusicarchive.org" target="_blank" rel="noopener">Free Music Archive</a> ·
+          <a href="https://incompetech.com" target="_blank" rel="noopener">Incompetech</a> ·
+          <a href="https://www.bensound.com" target="_blank" rel="noopener">Bensound</a></li>
+      </ul>
+    </details>
+
+    <div class="wiz-nav">
+      <a class="btn btn-primary btn-lg" href="/occasion">{{ t('occasion.music_done') }} &rarr;</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+function ompChosen(input){ const s=document.getElementById('omp-chosen'); const f=[...(input.files||[])]; s.textContent=f.length?f.map(x=>x.name).join(', '):s.dataset.empty; }
+function ompRows(){ return [...document.querySelectorAll('#omp-list .music-row')]; }
+function ompRender(names){
+  const list=document.getElementById('omp-list'); list.innerHTML='';
+  names.forEach(name=>{
+    const row=document.createElement('div'); row.className='music-row'; row.dataset.name=name;
+    const nm=document.createElement('span'); nm.className='music-name'; nm.dir='auto'; nm.textContent=name;
+    const au=document.createElement('audio'); au.controls=true; au.preload='none'; au.src='/media/music/'+encodeURIComponent(name);
+    const acts=document.createElement('span'); acts.className='music-actions';
+    const up=document.createElement('button'); up.type='button'; up.textContent='▲'; up.onclick=()=>ompMove(name,-1);
+    const dn=document.createElement('button'); dn.type='button'; dn.textContent='▼'; dn.onclick=()=>ompMove(name,1);
+    const rm=document.createElement('button'); rm.type='button'; rm.textContent=window.t('setup.remove'); rm.onclick=()=>ompDelete(name);
+    acts.append(up,dn,rm); row.append(nm,au,acts); list.appendChild(row);
+  });
+  document.getElementById('omp-empty').hidden = names.length>0;
+}
+async function ompRefresh(){ const d=await (await fetch('/occasion/music/list')).json(); ompRender(d.tracks||[]); }
+async function ompUpload(){
+  const f=document.getElementById('omp-file'); if(!f.files||!f.files.length) return;
+  const fd=new FormData(); for(const file of f.files) fd.append('tracks', file);
+  const r=await fetch('/setup/music',{method:'POST',body:fd});
+  if(!r.ok){ const d=await r.json().catch(()=>({})); alert(d.detail||'Upload failed'); return; }
+  f.value=''; ompChosen(f); ompRefresh();
+}
+async function ompDelete(name){
+  if(!confirm(window.tf('setup.js.remove_confirm',{label:name}))) return;
+  await fetch('/setup/music/'+encodeURIComponent(name)+'/delete',{method:'POST'}); ompRefresh();
+}
+async function ompMove(name,dir){
+  const names=ompRows().map(r=>r.dataset.name); const i=names.indexOf(name), j=i+dir;
+  if(i<0||j<0||j>=names.length) return;
+  names.splice(i,1); names.splice(j,0,name);
+  const body=new URLSearchParams(); names.forEach(n=>body.append('order',n));
+  await fetch('/setup/music/order',{method:'POST',body}); ompRefresh();
+}
+</script>
+{% endblock %}

@@ -43,7 +43,7 @@ DEFAULTS = {
     # Video generation paths.
     "music_dir": str(paths.data_path("music")),
     "output_dir": str(paths.data_path("output")),
-    "output_basename": "trip_video",
+    "output_basename": "memowheel",
     # Playback order of music tracks (filenames in music_dir); extras not listed
     # here are appended in filename order.
     "music_order": [],

@@ -1,8 +1,8 @@
-# Packaging Trip Video (zero-install app)
+# Packaging Memowheel (zero-install app)
 
 Goal: hand a friend a folder they double-click - no Python, no `pip`, no
 terminal. This uses [PyInstaller](https://pyinstaller.org) to bundle Python and
-every dependency into `dist/TripVideo/`.
+every dependency into `dist/Memowheel/`.
 
 ## Build
 
@@ -13,9 +13,9 @@ source:
 powershell -ExecutionPolicy Bypass -File packaging\build.ps1
 ```
 
-That installs the deps + PyInstaller and runs `packaging/trip_video.spec`,
-producing `dist\TripVideo\TripVideo.exe`. Zip the whole `dist\TripVideo` folder
-and share it; the recipient unzips and double-clicks `TripVideo.exe`. It runs
+That installs the deps + PyInstaller and runs `packaging/memowheel.spec`,
+producing `dist\Memowheel\Memowheel.exe`. Zip the whole `dist\Memowheel` folder
+and share it; the recipient unzips and double-clicks `Memowheel.exe`. It runs
 **windowless** - no console flashes open. A system-tray icon appears (Open /
 View log / Quit) and the browser opens at the setup screen. Because there's no
 console, the server's output goes to a log file (under the per-user data dir),
@@ -38,7 +38,7 @@ somewhere writable (Desktop, Documents - not `Program Files`).
   `portable.txt` marker or dev keeps it at `./data`), and
   `migrate_legacy_data_if_needed()` moves an older next-to-exe `data/` into it on
   first run (called from `tray_app.main()`).
-- `packaging/trip_video.spec` - bundles the assets (including the YuNet/SFace
+- `packaging/memowheel.spec` - bundles the assets (including the YuNet/SFace
   face models under `models/faces/`) and `collect_all`s the heavy native packages
   (cv2, imageio-ffmpeg, moviepy, reverse_geocoder, ...).
 

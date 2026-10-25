@@ -65,14 +65,17 @@ def trip_entry(request: Request):
     straight to the wizard; otherwise show the chooser: continue the last
     unfinished project, open one from the list, or start a new one."""
     project_store.ensure_current()  # adopt an existing catalog as the first project
-    projects = project_store.list_projects()
+    # Trip chooser lists trips only; occasions live under /occasion.
+    projects = [p for p in project_store.list_projects()
+                if project_store.project_kind(p["id"]) != "occasion"]
     if not projects:
         return RedirectResponse("/setup", status_code=303)
+    last_unfinished = next((p for p in projects if not p.get("video")), None)
     return templates.TemplateResponse(request, "trip_chooser.html", {
         "projects": projects,
         "archived": project_store.list_archived(),
         "current": project_store.current(),
-        "last_unfinished": project_store.last_unfinished(),
+        "last_unfinished": last_unfinished,
     })
 
 
@@ -122,6 +125,7 @@ def review_page(request: Request, view: str = "", day: str = "", conn=Depends(ge
     """The Story workspace: a left rail navigates Days + triage (Needs Attention /
     Unassigned); the main pane shows the selected day's moments as cover tiles.
     Opening a tile drills into the moment editor (loaded via the fragment route)."""
+    is_occasion = project_store.current_kind() == "occasion"
     clusters = conn.execute(
         "SELECT id, trip_day, place_name FROM clusters ORDER BY trip_day"
     ).fetchall()
@@ -158,7 +162,9 @@ def review_page(request: Request, view: str = "", day: str = "", conn=Depends(ge
                 dur += (e - s) if (e and e > s) else (e if e else 6.0)
         included = sum(1 for i in its if i["include_in_video"])
         return {
-            "id": c["id"], "title": c["place_name"], "needs": c["place_name"] is None,
+            # An occasion has no place axis, so a cluster is never "needs a place".
+            "id": c["id"], "title": c["place_name"],
+            "needs": (c["place_name"] is None) and not is_occasion,
             "count": len(its), "included": included, "duration": _fmt_dur(dur),
             "cover": ({"id": cover["id"], "type": cover["item_type"],
                        "rotation": cover["rotation"], "crop": cover["crop"]} if cover else None),
@@ -177,7 +183,7 @@ def review_page(request: Request, view: str = "", day: str = "", conn=Depends(ge
 
     overview = {
         "all_moments": len(clusters),
-        "needs_attention": sum(1 for c in clusters if c["place_name"] is None),
+        "needs_attention": 0 if is_occasion else sum(1 for c in clusters if c["place_name"] is None),
         "unassigned": conn.execute("SELECT COUNT(*) AS n FROM items WHERE cluster_id IS NULL").fetchone()["n"],
     }
 
@@ -219,6 +225,7 @@ def review_page(request: Request, view: str = "", day: str = "", conn=Depends(ge
     gap = conn.execute("SELECT gap_threshold_minutes FROM clusters ORDER BY trip_day LIMIT 1").fetchone()
 
     return templates.TemplateResponse(request, "review.html", {
+        "kind": "occasion" if is_occasion else "trip",
         "days": days,
         "overview": overview,
         "view": view,
@@ -895,7 +902,8 @@ def trigger_generate(mode: str = Form("final"), render: str = Form(""), conn=Dep
             # project), not a stale global setting.
             out = generate_video(c, progress_cb=cb, mode=render_mode,
                                  basename=project_store.output_basename(),
-                                 render_parallel=render_parallel)
+                                 render_parallel=render_parallel,
+                                 kind=project_store.current_kind())
             # A draft is a throwaway preview; only a full-quality render marks the
             # project "finished" (and only that gets the finished badge/flow).
             if render_mode == "final":

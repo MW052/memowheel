@@ -1,4 +1,4 @@
-"""Log viewer: shows the server's own log file (data/logs/tripvideo.log) so a
+"""Log viewer: shows the server's own log file (data/logs/memowheel.log) so a
 user running the app windowless (system tray, no console) can still see what it
 is doing. Reached from the kebab menu's "View log" item.
 """

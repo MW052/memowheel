@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ t('occasion.triage_title') }} · {{ app_name }}{% endblock %}
+
+{% macro tile(it) %}
+<div class="tr-tile {{ 'is-out' if not it.include_in_video }}" data-id="{{ it.id }}">
+  <img src="/media/{{ it.id }}" loading="lazy" alt="">
+  {% if it.item_type == 'clip' %}<span class="tr-clip">&#9654;</span>{% endif %}
+  <div class="tr-tile-acts">
+    <button type="button" class="tr-inc" title="{{ t('occasion.triage_toggle') }}" aria-label="{{ t('occasion.triage_toggle') }}" onclick="trToggle(this)"></button>
+    <button type="button" class="tr-rm" title="{{ t('occasion.triage_remove') }}" aria-label="{{ t('occasion.triage_remove') }}" onclick="trRemove(this)">&times;</button>
+  </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="tr-shell">
+  <header class="tr-head">
+    <p class="kicker">{{ t('feature.occasion.name') }}</p>
+    <h1>{{ t('occasion.triage_title') }}</h1>
+    <p class="tr-sub">{{ t('occasion.triage_sub', n=total, who=honoree) }}</p>
+    <a class="btn btn-primary btn-lg" href="/review">{{ t('occasion.triage_continue') }} &rarr;</a>
+  </header>
+
+  {% if total == 0 %}
+  <p class="tr-empty">{{ t('occasion.triage_empty') }}</p>
+  {% else %}
+
+  <section>
+    <h2 class="tr-sec">{{ t('occasion.triage_strong') }} · <span id="tr-strong-n">{{ strong|length }}</span></h2>
+    <div class="tr-grid">
+      {% for it in strong %}{{ tile(it) }}{% endfor %}
+    </div>
+  </section>
+
+  {% if maybe %}
+  <section>
+    <h2 class="tr-sec">{{ t('occasion.triage_maybe') }} · <span>{{ maybe|length }}</span></h2>
+    <p class="tr-hint">{{ t('occasion.triage_maybe_hint') }}</p>
+    <div class="tr-grid">
+      {% for it in maybe %}{{ tile(it) }}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% endif %}
+</div>
+{% endblock %}
+{% block script %}
+<script>
+async function trToggle(btn){
+  const t = btn.closest('.tr-tile');
+  const r = await fetch('/items/' + t.dataset.id + '/toggle', {method:'POST'});
+  if(!r.ok) return;
+  const d = await r.json();
+  t.classList.toggle('is-out', !d.included);
+}
+async function trRemove(btn){
+  const t = btn.closest('.tr-tile');
+  const r = await fetch('/occasion/triage/remove', {method:'POST', body:new URLSearchParams({item_id: t.dataset.id})});
+  if(r.ok) t.remove();
+}
+</script>
+{% endblock %}

@@ -25,26 +25,27 @@
 {% endmacro %}
 
 {% block content %}
+{% set occ = kind == 'occasion' %}
 <aside class="ws-sidebar">
   <div class="ov-label">{{ t('review.overview') }}</div>
   <a class="ov-row {{ 'on' if view == 'all' }}" href="/review?view=all"><span>{{ t('review.all_moments') }}</span><b>{{ overview.all_moments }}</b></a>
-  <a class="ov-row {{ 'on' if view == 'needs' }}" href="/review?view=needs"><span>{{ t('review.needs_attention') }}</span><b class="{{ 'attn' if overview.needs_attention }}">{{ overview.needs_attention }}</b></a>
+  {% if not occ %}<a class="ov-row {{ 'on' if view == 'needs' }}" href="/review?view=needs"><span>{{ t('review.needs_attention') }}</span><b class="{{ 'attn' if overview.needs_attention }}">{{ overview.needs_attention }}</b></a>{% endif %}
   <a class="ov-row {{ 'on' if view == 'unassigned' }}" href="/review?view=unassigned"><span>{{ t('review.nav_unassigned') }}</span><b>{{ overview.unassigned }}</b></a>
 
-  <div class="ov-label">{{ t('review.days_label') }}</div>
+  <div class="ov-label">{{ t('review.years_label') if occ else t('review.days_label') }}</div>
   <div class="day-list">
     {% for d in days %}
     <a class="day-row {{ 'on' if (sel_day and sel_day.trip_day == d.trip_day and not view) }}" href="/review?day={{ d.trip_day }}">
-      <span class="dr-name">{{ t('review.day', n=d.index) }}</span>
-      <span class="dr-date">{{ d.short }}</span>
+      <span class="dr-name">{{ d.caption if occ else t('review.day', n=d.index) }}</span>
+      {% if not occ %}<span class="dr-date">{{ d.short }}</span>{% endif %}
       <span class="dr-count">{{ d.count }}</span>
     </a>
     {% endfor %}
   </div>
-  <button class="add-day-link" onclick="addDay()">+ {{ t('review.add_day') }}</button>
+  {% if not occ %}<button class="add-day-link" onclick="addDay()">+ {{ t('review.add_day') }}</button>{% endif %}
 
   <details class="trip-settings">
-    <summary>{{ t('review.trip_settings') }}</summary>
+    <summary>{{ t('review.occasion_settings') if occ else t('review.trip_settings') }}</summary>
     <form id="intro-form" class="ts-form">
       <label for="intro-text">{{ t('review.opening') }}</label>
       <textarea id="intro-text" name="intro_text" dir="auto" rows="2">{{ intro_text }}</textarea>
@@ -55,6 +56,7 @@
       <textarea id="outro-text" name="outro_text" dir="auto" rows="2">{{ outro_text }}</textarea>
       <button type="submit" class="btn btn-secondary">{{ t('review.save_closing') }}</button>
     </form>
+    {% if not occ %}
     <form id="recluster-form" class="ts-form">
       <label>{{ t('review.group_within') }} {{ t('review.minutes') }}</label>
       <div class="row-form">
@@ -62,6 +64,7 @@
         <button type="submit" class="btn btn-secondary">{{ t('review.regroup') }}</button>
       </div>
     </form>
+    {% endif %}
   </details>
 </aside>
 
@@ -99,8 +102,12 @@
     {% elif view == 'all' %}
     {% for sec in day_sections %}
     <div class="day-block">
+      {% if occ %}
+      <h2 class="ws-h2">{{ sec.day.caption }}</h2>
+      {% else %}
       <h2 class="ws-h2">{{ t('review.day', n=sec.day.index) }} <span class="dh-date">{{ sec.day.long }}</span></h2>
       {% if sec.day.caption %}<div class="dh-sub">{{ sec.day.caption }}</div>{% endif %}
+      {% endif %}
       <div class="tiles">{% for m in sec.tiles %}{{ tile(m) }}{% endfor %}</div>
     </div>
     {% endfor %}
@@ -113,16 +120,22 @@
     {% elif sel_day %}
     <div class="day-header">
       <div class="dh-left">
+        {% if occ %}
+        <h2 class="ws-h2">{{ sel_day.caption }}</h2>
+        {% else %}
         <h2 class="ws-h2">{{ t('review.day', n=sel_day.index) }} <span class="dh-dot">&middot;</span> <span class="dh-date">{{ sel_day.long }}</span></h2>
         <div class="dh-sub {{ 'placeholder' if not sel_day.caption }}" id="day-caption-text" data-day="{{ sel_day.trip_day }}">{{ sel_day.caption or t('review.no_day_title') }}</div>
+        {% endif %}
       </div>
+      {% if not occ %}
       <div class="dh-actions">
         <button class="btn btn-secondary" onclick="editDayTitle('{{ sel_day.trip_day }}')">{{ t('review.edit_day_title') }}</button>
         <button class="kebab" onclick="dayMenu(event, '{{ sel_day.trip_day }}')" title="{{ t('review.more') }}">&#8942;</button>
       </div>
+      {% endif %}
     </div>
     <div class="tiles">{% for m in tiles %}{{ tile(m) }}{% endfor %}</div>
-    <button class="add-dashed" onclick="addMoment('{{ sel_day.trip_day }}')">+ {{ t('review.add_moment') }}</button>
+    {% if not occ %}<button class="add-dashed" onclick="addMoment('{{ sel_day.trip_day }}')">+ {{ t('review.add_moment') }}</button>{% endif %}
     {% endif %}
   </div>
 
@@ -169,6 +182,7 @@
   <div class="lightbox-inner" id="lightbox-inner" onclick="event.stopPropagation()"></div>
   <button class="lightbox-close" onclick="closeLightbox()" title="{{ t('review.close_esc') }}">&times;</button>
 </div>
+<div id="lb-zoom" class="lb-zoom" onclick="closeZoom()" title="{{ t('review.close_esc') }}"><img id="lb-zoom-img" alt=""></div>
 
 <div id="media-picker" class="picker" style="display:none" onclick="closeMediaPicker()">
   <div class="picker-box media-picker-box" onclick="event.stopPropagation()">
@@ -505,8 +519,9 @@ function openLightbox(itemId, type, opts) {
   const inner = document.getElementById("lightbox-inner");
   if (type === "photo") {
     const bust = "?v=" + (opts.rotation || 0) + "_" + ((opts.crop || "").replace(/[,.]/g, "")) + "_" + Date.now();
-    inner.innerHTML = `<img src="/media/${itemId}${bust}">` +
-      `<div class="lb-tools"><button onclick="rotateItem(${itemId})">${t('review.js.rotate')}</button>` +
+    inner.innerHTML = `<img src="/media/${itemId}${bust}" onclick="openZoom(${itemId})" class="lb-clickable" title="${t('review.js.enlarge')}">` +
+      `<div class="lb-tools"><button onclick="openZoom(${itemId})">${t('review.js.enlarge')}</button>` +
+      `<button onclick="rotateItem(${itemId})">${t('review.js.rotate')}</button>` +
       `<button onclick="startCrop(${itemId}, ${JSON.stringify(opts.crop || null)})">${t('review.js.crop')}</button>` +
       (opts.crop ? `<button onclick="clearCrop(${itemId})">${t('review.js.reset_crop')}</button>` : "") + `</div>`;
   } else {
@@ -584,7 +599,23 @@ async function clearCrop(itemId) {
   const cid = clusterIdOf(itemId); closeLightbox(); await refreshCluster(cid);
 }
 function closeLightbox() { document.getElementById("lightbox").style.display = "none"; document.getElementById("lightbox-inner").innerHTML = ""; }
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeLightbox(); closeFaces(); } });
+// Full-screen enlarge: the photo fills the viewport (no editing chrome); click
+// anywhere or Esc to dismiss back to the lightbox.
+function openZoom(itemId) {
+  document.getElementById("lb-zoom-img").src = `/media/${itemId}?full=1&t=${Date.now()}`;
+  document.getElementById("lb-zoom").style.display = "flex";
+}
+function closeZoom() {
+  const z = document.getElementById("lb-zoom");
+  z.style.display = "none";
+  document.getElementById("lb-zoom-img").src = "";
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  const z = document.getElementById("lb-zoom");
+  if (z && z.style.display === "flex") { closeZoom(); return; }  // Esc exits enlarge first
+  closeLightbox(); closeFaces();
+});
 
 // ---------- cover / assign / faces / place / find ----------
 async function setCover(clusterId, itemId) { await fetch(`/clusters/${clusterId}/cover/${itemId}`, { method: "POST" }); await refreshCluster(clusterId); }
@@ -660,7 +691,7 @@ function editDayTitle(td) {
 // ---------- trip settings (opening / closing / regroup) ----------
 document.getElementById("intro-form").addEventListener("submit", async (e) => { e.preventDefault(); await fetch("/intro", { method: "POST", body: new URLSearchParams(new FormData(e.target)) }); flashSaved(e.target); });
 document.getElementById("outro-form").addEventListener("submit", async (e) => { e.preventDefault(); await fetch("/outro", { method: "POST", body: new URLSearchParams(new FormData(e.target)) }); flashSaved(e.target); });
-document.getElementById("recluster-form").addEventListener("submit", async (e) => {
+document.getElementById("recluster-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   await fetch("/recluster", { method: "POST", body: new URLSearchParams(new FormData(e.target)) });
   location.reload();

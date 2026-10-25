@@ -1,4 +1,4 @@
-# Build Trip Video into a one-folder, no-Python-needed app.
+# Build Memowheel into a one-folder, no-Python-needed app.
 # Run from anywhere:  powershell -ExecutionPolicy Bypass -File packaging\build.ps1
 $ErrorActionPreference = "Stop"
 Set-Location (Join-Path $PSScriptRoot "..")
@@ -12,9 +12,9 @@ py -m pip install -r requirements.txt
 py -m pip install pyinstaller
 
 Write-Host "Building (this can take several minutes and produce a large folder)..."
-py -m PyInstaller --noconfirm packaging\trip_video.spec
+py -m PyInstaller --noconfirm packaging\memowheel.spec
 
-$appDir = "dist\TripVideo"
+$appDir = "dist\Memowheel"
 if (Test-Path $appDir) {
     # Ship the guides next to the exe (visible, double-clickable), so the
     # zip a recipient unpacks already contains them - self-contained HTML,
@@ -28,13 +28,13 @@ if (Test-Path $appDir) {
     Copy-Item "docs\manual-he.html"  (Join-Path $appDir "User Guide - Hebrew.html")  -Force
 }
 
-$exe = "dist\TripVideo\TripVideo.exe"
+$exe = "dist\Memowheel\Memowheel.exe"
 if (Test-Path $exe) {
     Write-Host ""
     Write-Host "Done. The app is: $exe"
     Write-Host "The install + user guides ship alongside it (Installation Guide / User Guide - English.html / - Hebrew.html)."
-    Write-Host "Zip the whole 'dist\TripVideo' folder and share it. The recipient"
-    Write-Host "double-clicks TripVideo.exe - no Python or install needed."
+    Write-Host "Zip the whole 'dist\Memowheel' folder and share it. The recipient"
+    Write-Host "double-clicks Memowheel.exe - no Python or install needed."
 } else {
     Write-Host "Build finished but $exe was not found - check the PyInstaller output above."
 }

@@ -103,7 +103,7 @@ Implementation notes (all in `generate/assemble.py`):
 ---
 
 ## 4. Packaging impact
-- New font files are loose data in the bundle (`packaging/trip_video.spec` already
+- New font files are loose data in the bundle (`packaging/memowheel.spec` already
   ships `generate/fonts` + `review_app/static/fonts`). Add the new ones there.
 - **Bundle size:** CJK fonts add tens of MB to `dist/`. Acceptable for a desktop
   app, but note it. If size matters, ship CJK fonts as an **optional add-on** the

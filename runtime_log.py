@@ -21,10 +21,10 @@ from pathlib import Path
 import paths
 
 LOG_DIR = paths.data_path("logs")
-LOG_FILE = LOG_DIR / "tripvideo.log"
+LOG_FILE = LOG_DIR / "memowheel.log"
 
 _MAX_BYTES = 1_000_000  # ~1 MB per file
-_BACKUPS = 3            # tripvideo.log + .1 .2 .3
+_BACKUPS = 3            # memowheel.log + .1 .2 .3
 
 
 def build_log_config(console: bool = True) -> dict:

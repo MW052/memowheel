@@ -19,7 +19,7 @@ window.tf = (k, vars, d) => {
 <body>
 {% set path = request.url.path %}
 {% set workspace = path.startswith('/review') or path.startswith('/preview') or path.startswith('/finish') %}
-{% set has_menu = workspace or path.startswith('/setup') or path.startswith('/trip') or path.startswith('/logs') or path.startswith('/people') or path.startswith('/gallery') %}
+{% set has_menu = workspace or path.startswith('/setup') or path.startswith('/trip') or path.startswith('/logs') or path.startswith('/people') or path.startswith('/gallery') or path.startswith('/occasion') %}
 
 <header class="app-header {{ 'is-workspace' if workspace else 'is-minimal' }}">
   <div class="ah-left">
@@ -29,6 +29,17 @@ window.tf = (k, vars, d) => {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
       <div class="ah-menu" id="ah-menu" hidden>
+        {% set occ_ctx = project_kind == 'occasion' or path.startswith('/occasion') %}
+        {% if occ_ctx %}
+        {# Occasion context: show occasion-relevant links, not trip setup steps. #}
+        <div class="ah-menu-label">{{ t('feature.occasion.name') }}</div>
+        {% if project_kind == 'occasion' %}<a href="/review">{{ t('nav.story') }}</a>{% endif %}
+        <a href="/occasion/new">{{ t('occasion.new') }}</a>
+        <a href="/occasion">{{ t('occasion.your') }}</a>
+        <a href="/occasion/music">{{ t('occasion.step_music') }}</a>
+        <hr>
+        <a href="/trip">{{ t('feature.trip.name') }}</a>
+        {% else %}
         <div class="ah-menu-label">{{ t('feature.trip.name') }}</div>
         <a href="/trip">{{ t('projects.switch') }}</a>
         <a href="/review">{{ t('nav.story') }}</a>
@@ -37,6 +48,9 @@ window.tf = (k, vars, d) => {
         <a href="/setup#step-3">{{ t('setup.wiz.step_mood') }}</a>
         <a href="/setup#step-4">{{ t('setup.wiz.step_music') }}</a>
         <a href="/setup#step-5">{{ t('setup.wiz.step_import') }}</a>
+        <hr>
+        <a href="/occasion">{{ t('feature.occasion.name') }}</a>
+        {% endif %}
         <hr>
         <div class="ah-menu-label">{{ t('nav.people_section') }}</div>
         <a href="/people">{{ t('nav.people') }}</a>
@@ -48,7 +62,7 @@ window.tf = (k, vars, d) => {
       </div>
     </div>
     {% endif %}
-    <a class="ah-brand" href="/"><b>{{ app_name }}</b>{% if workspace %}<span class="ah-sep">/</span><span class="ah-maker">{{ t('feature.trip.name') }}</span>{% endif %}</a>
+    <a class="ah-brand" href="/"><b>{{ app_name }}</b>{% if workspace %}<span class="ah-sep">/</span><span class="ah-maker">{{ t('feature.occasion.name') if project_kind == 'occasion' else t('feature.trip.name') }}</span>{% endif %}</a>
     {% if workspace %}
     <button class="ah-trip" type="button" aria-haspopup="true" onclick="toggleAppMenu(event)">{{ trip_name }}<span class="ah-caret">⌄</span></button>
     {% endif %}
