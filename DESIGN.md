@@ -1,4 +1,4 @@
-# Design System — Trip Video
+# Design System — Memowheel
 
 > Direction A: **a warm keepsake, made by hand.**
 > Read this before making any visual or UI decision, in the app *or* in the

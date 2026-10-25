@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in Memowheel / Trip Video.
+Thanks for your interest in Memowheel.
 
 ## License of contributions
 

@@ -1,16 +1,21 @@
-# Memowheel — Trip Video
+# Memowheel
 
-A locally-run app that turns a trip's photos and short clips into a keepsake
-video: it groups them by place and day, lets you review and curate them in a
-browser, then renders an MP4 with title cards, place captions, and music. It
-runs entirely on your own machine — no accounts, nothing uploaded except the
-few photos you approve for AI place-identification.
+A locally-run app that turns your photos into a keepsake video. It runs
+entirely on your own machine — no accounts, nothing uploaded except the few
+photos you approve for AI place-identification.
 
-The app is a small **hub ("Memowheel")** of "makers"; **Trip Video** is the
-first and only live one. Occasion Video is stubbed as a coming-soon card.
-See `git log --oneline` for the authoritative change log.
-All visual decisions (app **and** video) are
-governed by `DESIGN.md` — read it before any UI/aesthetic change.
+Memowheel is a small **hub** of "makers", two of them live:
+
+- **Trip Video** — point it at a trip's photos and short clips; it groups them
+  by place and day, you review and curate in a browser, and it renders an MP4
+  with title cards, place captions, and music.
+- **Occasion Video** — pick a person for a birthday, anniversary, or memorial;
+  on-device face recognition gathers their photos from across your library,
+  arranges them by year, and you confirm the matches before rendering.
+
+See `git log --oneline` for the authoritative change log. All visual decisions
+(app **and** video) are governed by `DESIGN.md` — read it before any
+UI/aesthetic change.
 
 ## System requirements
 
@@ -95,7 +100,9 @@ See `packaging\README.md` for details and clean-machine caveats.
 
 ## Using the app (GUI)
 
-Everything is drivable from the browser; there is no required CLI step.
+Everything is drivable from the browser; there is no required CLI step. The
+steps below describe the **Trip Video** flow; **Occasion Video** has its own
+guided flow (see below).
 
 1. **Setup wizard (`/setup`)** — a stepped, single-card flow:
    - **Enroll people:** upload a few clear reference photos of each person you
@@ -118,6 +125,16 @@ Everything is drivable from the browser; there is no required CLI step.
 3. **Preview / Finish** — render a **Quick draft** (fast, low-res, watermark-free
    preview) or the **Final film** (full 1080p), watch it in an embedded player,
    and download it. Output lands in `data/output/`.
+
+### Making an Occasion Video
+
+From the menu, choose **Occasion Video**. A guided wizard asks for the occasion
+and mood (birthday, anniversary, or a distinct memorial design), lets you add
+media, and picks the person it's for. On-device face recognition then **gathers**
+their photos from across your enrolled library and groups them **by calendar
+year**; you **triage** the matches (keep/remove), set the title cards, messages,
+and an optional cover photo, choose intro/outro animations and music, and render
+from the same **Preview / Finish** page as above.
 
 ### Importing from Google Drive or Google Photos
 

@@ -1,6 +1,6 @@
 # Third-party notices
 
-Memowheel / Trip Video is distributed under the MIT License (`LICENSE`). It
+Memowheel is distributed under the MIT License (`LICENSE`). It
 builds on third-party software and data with their own licenses, summarized below.
 
 This file is a **convenience summary, not the authoritative license text.** The
