@@ -16,6 +16,7 @@ import project_store
 from db.schema import get_connection, DEFAULT_DB_PATH
 from review_app.db import get_db
 from review_app.templating import templates
+from review_app import i18n
 from ingest.pipeline import ingest_phase2, add_items_from_path, classify_media
 from ingest.faces import load_enrolled
 from ingest.clustering import DEFAULT_GAP_THRESHOLD_MINUTES
@@ -49,14 +50,16 @@ def _fmt_dur(secs: float) -> str:
     return f"{s} sec" if s < 60 else f"{s // 60}:{s % 60:02d}"
 
 
-def _day_labels(trip_day: str) -> tuple[str, str]:
+def _day_labels(trip_day: str, lang: str = "en") -> tuple[str, str]:
     """(short, long) date labels for a YYYY-MM-DD trip_day, e.g. ('19 Jul',
-    '19 July 2023'). Falls back to the raw value if it isn't a date."""
+    '19 July 2023') — month names localized to `lang` (so Hebrew gets Hebrew
+    months). Falls back to the raw value if it isn't a date."""
     try:
         d = datetime.strptime(trip_day, "%Y-%m-%d")
     except (TypeError, ValueError):
         return trip_day, trip_day
-    return f"{d.day} {d.strftime('%b')}", f"{d.day} {d.strftime('%B %Y')}"
+    return (f"{d.day} {i18n.month_name(lang, d.month, abbr=True)}",
+            f"{d.day} {i18n.month_name(lang, d.month)} {d.year}")
 
 
 @router.get("/trip", response_class=HTMLResponse)
@@ -96,6 +99,20 @@ def projects_open(pid: str):
     if proj and proj.get("video"):
         dest = "/finish"  # finished projects open on their film
     return RedirectResponse(dest, status_code=303)
+
+
+@router.get("/projects/list")
+def projects_list_json():
+    """Lightweight list for the header project switcher: projects of the current
+    maker (trips while in a trip, occasions while in an occasion), most-recent
+    first, with the active one flagged."""
+    cur = project_store.current_id()
+    kind = project_store.current_kind()
+    items = [{"id": p["id"], "name": (p.get("name") or "Untitled"),
+              "current": p["id"] == cur}
+             for p in project_store.list_projects()
+             if (p.get("kind", "trip") or "trip") == kind]
+    return {"projects": items, "all_url": "/occasion" if kind == "occasion" else "/trip"}
 
 
 @router.post("/projects/restore-archive/{ts}")
@@ -176,8 +193,9 @@ def review_page(request: Request, view: str = "", day: str = "", conn=Depends(ge
     for c in clusters:
         clusters_by_day.setdefault(c["trip_day"], []).append(c)
     days = []
+    lang = i18n.get_lang(request)
     for idx, td in enumerate(sorted(clusters_by_day), start=1):
-        short, long = _day_labels(td)
+        short, long = _day_labels(td, lang)
         days.append({"trip_day": td, "index": idx, "count": len(clusters_by_day[td]),
                      "short": short, "long": long, "caption": captions.get(td, "")})
 
@@ -958,12 +976,35 @@ def _latest_output() -> str | None:
     return path.name if path.is_file() else None
 
 
+def _render_state() -> tuple[str, str | None]:
+    """('none' | 'stale' | 'fresh', latest_filename). 'stale' means the catalog
+    has changed since the recorded film was rendered, so the film no longer
+    reflects the Story. Uses the catalog's mtime (incl. its WAL sidecar, which is
+    what actually bumps on each edit) vs the film file's mtime."""
+    latest = _latest_output()
+    if not latest:
+        return "none", None
+    try:
+        output_dir = Path(config.get_setting("output_dir", str(paths.data_path("output"))))
+        out_mtime = (output_dir / latest).stat().st_mtime
+        db = Path(DEFAULT_DB_PATH)
+        edit_mtime = db.stat().st_mtime
+        wal = db.with_name(db.name + "-wal")
+        if wal.is_file():
+            edit_mtime = max(edit_mtime, wal.stat().st_mtime)
+        return ("stale" if edit_mtime > out_mtime + 1 else "fresh"), latest
+    except OSError:
+        return "fresh", latest
+
+
 @router.get("/preview", response_class=HTMLResponse)
 def preview_page(request: Request, conn=Depends(get_db)):
     """Watch the current draft; rebuild it after editing in Story."""
     included = conn.execute("SELECT COUNT(*) AS n FROM items WHERE include_in_video = 1").fetchone()["n"]
+    render_state, latest = _render_state()
     return templates.TemplateResponse(request, "preview.html", {
-        "latest": _latest_output(),
+        "latest": latest,
+        "render_state": render_state,
         "included_count": included,
         "render_parallel": config.get_bool("render_parallel", True),
     })
@@ -973,8 +1014,10 @@ def preview_page(request: Request, conn=Depends(get_db)):
 def finish_page(request: Request, conn=Depends(get_db)):
     """The finished film: play + download; nothing leaves the machine."""
     included = conn.execute("SELECT COUNT(*) AS n FROM items WHERE include_in_video = 1").fetchone()["n"]
+    render_state, latest = _render_state()
     return templates.TemplateResponse(request, "finish.html", {
-        "latest": _latest_output(),
+        "latest": latest,
+        "render_state": render_state,
         "included_count": included,
         "output_dir": config.get_setting("output_dir", str(paths.data_path("output"))),
     })

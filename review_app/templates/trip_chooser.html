@@ -18,9 +18,24 @@
   </form>
   {% endif %}
 
+  <form method="post" action="/projects/new" class="new-proj new-proj-top" onsubmit="return newProj(event)">
+    <button type="button" class="add-dashed" onclick="document.getElementById('new-proj-fields').hidden=!document.getElementById('new-proj-fields').hidden;this.nextElementSibling.hidden||document.querySelector('#new-proj-fields input').focus()">
+      <span class="add-plus">+</span> {{ t('projects.new') }}
+    </button>
+    <div id="new-proj-fields" hidden>
+      <div class="row-form">
+        <input type="text" name="name" dir="auto" placeholder="{{ t('projects.new_ph') }}" required>
+        <button type="submit" class="btn btn-primary">{{ t('projects.new_start') }} &rarr;</button>
+      </div>
+    </div>
+  </form>
+
   <div class="proj-section-label">{{ t('projects.your_projects') }}</div>
   <div class="proj-list">
-    {% for p in projects %}
+    {# De-duplicate the resume control (BL-04): omit the project held by the
+       continue-hero above from the roster so it isn't emphasized twice. #}
+    {% set roster = projects | rejectattr('id', 'equalto', last_unfinished.id) | list if last_unfinished else projects %}
+    {% for p in roster %}
     <div class="proj-row {{ 'is-current' if current and current.id == p.id }}" data-id="{{ p.id }}">
       <div class="proj-info">
         <div class="proj-name" dir="auto">{{ p.name }}
@@ -60,17 +75,6 @@
   </div>
   {% endif %}
 
-  <form method="post" action="/projects/new" class="new-proj" onsubmit="return newProj(event)">
-    <button type="button" class="add-dashed" onclick="document.getElementById('new-proj-fields').hidden=!document.getElementById('new-proj-fields').hidden;this.nextElementSibling.hidden||document.querySelector('#new-proj-fields input').focus()">
-      <span class="add-plus">+</span> {{ t('projects.new') }}
-    </button>
-    <div id="new-proj-fields" hidden>
-      <div class="row-form">
-        <input type="text" name="name" dir="auto" placeholder="{{ t('projects.new_ph') }}" required>
-        <button type="submit" class="btn btn-primary">{{ t('projects.new_start') }} &rarr;</button>
-      </div>
-    </div>
-  </form>
 </div>
 
 <div class="toasts" id="toasts" aria-live="polite"></div>

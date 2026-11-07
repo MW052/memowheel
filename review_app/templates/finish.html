@@ -1,22 +1,36 @@
 {% extends "base.html" %}
-{% block title %}{{ t('finish.title') }}{% endblock %}
+{% block title %}{{ t('finish.title') if latest else t('finish.not_built') }}{% endblock %}
 
 {% block content %}
 <div class="pf-page">
+  {% if latest %}
+  {# Only claim "Done / ready" when a current film actually exists. A stale film
+     (Story changed since the render) is shown but flagged, not called "Done". #}
+  {% if render_state == 'stale' %}
+  <span class="done-kicker pf-stale-badge">{{ t('finish.stale_badge') }}</span>
+  <h1 class="pf-h1">{{ t('finish.title') }}</h1>
+  <p class="pf-sub">{{ t('finish.stale_note') }}</p>
+  {% else %}
   <span class="done-kicker">{{ t('review.done') }}</span>
   <h1 class="pf-h1">&#127916; {{ t('finish.title') }}</h1>
-
-  {% if latest %}
+  {% endif %}
   <video class="pf-player" id="pf-video" controls preload="metadata" src="/output/{{ latest | urlencode }}"></video>
   <p class="pf-stats" id="pf-stats"></p>
   <div class="pf-actions">
-    <a class="btn btn-primary btn-lg" href="/output/{{ latest | urlencode }}" download="{{ latest }}">&#11015; {{ t('review.download') }}</a>
-    <a class="btn btn-secondary" href="/preview">{{ t('finish.rebuild') }}</a>
+    {# Download with a human-readable name (the project's), not the timestamped
+       internal file name (BL-25). The href still points at the real stored file. #}
+    <a class="btn btn-primary btn-lg" href="/output/{{ latest | urlencode }}" download="{{ trip_name | safe_filename }}.mp4">&#11015; {{ t('review.download') }}</a>
+    <a class="btn {{ 'btn-primary' if render_state == 'stale' else 'btn-secondary' }}" href="/preview">{{ t('finish.rebuild') }}</a>
     <a class="btn btn-secondary" href="/review">&larr; {{ t('preview.back_story') }}</a>
   </div>
   <p class="share-hint">{{ t('finish.saved_to', dir=output_dir) }}</p>
   {% else %}
-  <div class="pf-empty">{{ t('finish.none') }} <a href="/preview">{{ t('finish.go_preview') }}</a></div>
+  <h1 class="pf-h1">{{ t('finish.not_built') }}</h1>
+  <p class="pf-sub">{{ t('preview.sub') }}</p>
+  <div class="pf-actions">
+    <a class="btn btn-primary btn-lg" href="/preview">{{ t('finish.go_preview') }}</a>
+    <a class="btn btn-secondary" href="/review">&larr; {{ t('preview.back_story') }}</a>
+  </div>
   {% endif %}
 </div>
 {% endblock %}

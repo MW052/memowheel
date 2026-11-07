@@ -8,21 +8,10 @@
     <h1>{{ t('people.title') }}</h1>
   </header>
 
-  {# ---- search box (prefilled, scope preserved) ---- #}
+  {# ---- search box (shared component, prefilled, scope preserved) ---- #}
   <section class="pg-card pg-search">
-    <form action="/people/search" method="get" class="pg-search-form">
-      <input type="search" name="q" dir="auto" value="{{ q or '' }}" list="name-options"
-             placeholder="{{ t('people.search_ph') }}" required autofocus autocomplete="off">
-      <datalist id="name-options">
-        {% for name in name_options %}<option value="{{ name }}"></option>{% endfor %}
-      </datalist>
-      <fieldset class="pg-scope">
-        <span class="pg-scope-label">{{ t('people.scope_label') }}:</span>
-        <label><input type="radio" name="scope" value="current" {{ 'checked' if scope != 'all' }}> {{ t('people.scope_current') }}</label>
-        <label><input type="radio" name="scope" value="all" {{ 'checked' if scope == 'all' }}> {{ t('people.scope_all') }}</label>
-      </fieldset>
-      <button type="submit" class="btn btn-primary">{{ t('people.search_btn') }}</button>
-    </form>
+    {% set search_options = name_options %}
+    {% include "_personsearch.html" %}
   </section>
 
   {% if results %}

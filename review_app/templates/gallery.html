@@ -17,19 +17,9 @@
     {% elif status.subjects == 0 %}
     <p class="pg-hint">{{ t('gallery.need_index') }}</p>
     {% endif %}
-    <form action="/gallery/search" method="get" class="pg-search-form">
-      <input type="search" name="q" dir="auto" list="target-options"
-             placeholder="{{ t('gallery.search_ph') }}" required autofocus autocomplete="off">
-      <datalist id="target-options">
-        {% for tg in targets %}<option value="{{ tg.name }}"></option>{% endfor %}
-      </datalist>
-      <label class="gl-tier">{{ t('gallery.sensitivity') }}:
-        <select name="tier">
-          {% for tr in tiers %}<option value="{{ tr }}" {{ 'selected' if tr == 'balanced' }}>{{ t('gallery.tier_' ~ tr) }}</option>{% endfor %}
-        </select>
-      </label>
-      <button type="submit" class="btn btn-primary">{{ t('gallery.search_btn') }}</button>
-    </form>
+    {% set search_options = targets | map(attribute='name') | list %}
+    {% set ps_default_scope = 'library' %}
+    {% include "_personsearch.html" %}
   </section>
 
   {# ---- libraries + index ---- #}

@@ -1,0 +1,57 @@
+{# One person-search control, shared by /people and /gallery so the two entry
+   points stop being disjoint UIs for the same goal (BL-33). It exposes BOTH
+   axes together: scope (this project / all projects / whole library) and
+   sensitivity. Sensitivity only means something for the embedding-based library
+   search, so it's enabled only when scope = library (with a hint otherwise).
+
+   Set before including: `search_options` (list of names for the type-ahead),
+   `q`/`scope` (optional current values), `ps_default_scope` (optional, the
+   scope pre-selected when none is given — "current" unless overridden). #}
+{% set _scope = scope or ps_default_scope or 'current' %}
+<form class="pg-search-form person-search" onsubmit="return personSearch(event)">
+  <input type="search" name="q" dir="auto" list="ps-options" value="{{ q or '' }}"
+         placeholder="{{ t('people.search_ph') }}" required autofocus autocomplete="off">
+  <datalist id="ps-options">
+    {% for name in (search_options or []) %}<option value="{{ name }}"></option>{% endfor %}
+  </datalist>
+  <fieldset class="pg-scope">
+    <span class="pg-scope-label">{{ t('people.scope_label') }}:</span>
+    <label><input type="radio" name="scope" value="current" {{ 'checked' if _scope == 'current' }} onchange="psSyncTier(this.form)"> {{ t('people.scope_current') }}</label>
+    <label><input type="radio" name="scope" value="all" {{ 'checked' if _scope == 'all' }} onchange="psSyncTier(this.form)"> {{ t('people.scope_all') }}</label>
+    <label><input type="radio" name="scope" value="library" {{ 'checked' if _scope == 'library' }} onchange="psSyncTier(this.form)"> {{ t('people.scope_library') }}</label>
+  </fieldset>
+  <label class="gl-tier">{{ t('gallery.sensitivity') }}:
+    <select name="tier">
+      {% set _tier = tier or 'balanced' %}
+      {% for tr in ['strict', 'balanced', 'loose'] %}<option value="{{ tr }}" {{ 'selected' if tr == _tier }}>{{ t('gallery.tier_' ~ tr) }}</option>{% endfor %}
+    </select>
+    <span class="gl-tier-note" hidden>{{ t('people.sensitivity_lib_only') }}</span>
+  </label>
+  <button type="submit" class="btn btn-primary">{{ t('people.search_btn') }}</button>
+</form>
+<script>
+// Sensitivity applies only to the whole-library (embedding) search; for the
+// project-tag scopes it's disabled with a one-line explanation.
+function psSyncTier(form){
+  const lib = form.scope.value === 'library';
+  form.tier.disabled = !lib;
+  const wrap = form.querySelector('.gl-tier');
+  wrap.classList.toggle('is-disabled', !lib);
+  const note = wrap.querySelector('.gl-tier-note');
+  if(note) note.hidden = lib;
+}
+// Route to the matching existing endpoint: library → the embedding search (with
+// sensitivity); project/all → the tag search (with scope).
+function personSearch(e){
+  e.preventDefault();
+  const f = e.target, q = f.q.value.trim();
+  if(!q) return false;
+  if(f.scope.value === 'library'){
+    location.href = '/gallery/search?q=' + encodeURIComponent(q) + '&tier=' + encodeURIComponent(f.tier.value);
+  } else {
+    location.href = '/people/search?q=' + encodeURIComponent(q) + '&scope=' + encodeURIComponent(f.scope.value);
+  }
+  return false;
+}
+document.querySelectorAll('form.person-search').forEach(f => psSyncTier(f));
+</script>

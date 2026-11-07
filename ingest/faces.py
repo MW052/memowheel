@@ -153,6 +153,42 @@ def enroll_face(reference_image_paths: list[str]) -> np.ndarray:
     return embedding
 
 
+def reference_face_crop(image_path: str, out_size: int = 160) -> "np.ndarray | None":
+    """A square RGB thumbnail centered on the person's face, for use as an
+    enrolled-person avatar. Detects the largest face in the reference photo and
+    crops a padded square around it; if no face is found, falls back to a
+    center-square crop of the whole image. Returns an (out_size, out_size, 3)
+    uint8 RGB array, or None if the image can't be read.
+    """
+    img = load_corrected_bgr(image_path)   # BGR uint8
+    if img is None:
+        return None
+    h, w = img.shape[:2]
+    faces = _detect(img)
+    if len(faces):
+        f = _largest_face(faces)
+        fx, fy, fw, fh = float(f[0]), float(f[1]), float(f[2]), float(f[3])
+        cx, cy = fx + fw / 2.0, fy + fh / 2.0
+        half = max(fw, fh) * 0.75          # pad out so it's a face, not a tight box
+    else:
+        cx, cy = w / 2.0, h / 2.0
+        half = min(w, h) / 2.0
+    x0 = int(max(0, cx - half)); y0 = int(max(0, cy - half))
+    x1 = int(min(w, cx + half)); y1 = int(min(h, cy + half))
+    crop = img[y0:y1, x0:x1]
+    if crop.size == 0:
+        return None
+    # pad to a square so the face isn't distorted when resized
+    ch, cw = crop.shape[:2]
+    side = max(ch, cw)
+    sq = np.zeros((side, side, 3), dtype=crop.dtype)
+    oy, ox = (side - ch) // 2, (side - cw) // 2
+    sq[oy:oy + ch, ox:ox + cw] = crop
+    import cv2
+    sq = cv2.resize(sq, (out_size, out_size), interpolation=cv2.INTER_AREA)
+    return cv2.cvtColor(sq, cv2.COLOR_BGR2RGB)
+
+
 # Enrollment quality gate. The "self-consistency" of a person's reference photos
 # - how much each photo matches the average of the person's OTHER photos - is the
 # same leave-one-out measure tools/face_diag.py --calibrate uses. Healthy

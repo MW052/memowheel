@@ -20,10 +20,30 @@
   </div>
   {% endif %}
 
+  {# Resume hero for an in-progress occasion — same structure as the Trip
+     chooser so both maker landings share one shell (BL-01/BL-30). #}
+  {% if last_unfinished %}
+  <form method="post" action="/projects/{{ last_unfinished.id }}/open" class="continue-card">
+    <div>
+      <div class="cc-label">{{ t('projects.continue') }}</div>
+      <div class="cc-name" dir="auto">{{ last_unfinished.name }}</div>
+      <div class="cc-meta">{{ t('projects.in_progress') }} · {{ t('projects.updated', when=last_unfinished.updated[:10]) }}</div>
+    </div>
+    <button type="submit" class="btn btn-primary btn-lg">{{ t('projects.continue_btn') }} &rarr;</button>
+  </form>
+  {% endif %}
+
+  <a class="add-dashed new-proj-top" href="/occasion/new">
+    <span class="add-plus">+</span> {{ t('occasion.new') }}
+  </a>
+
   <div class="proj-section-label">{{ t('occasion.your') }}</div>
   <div class="proj-list">
-    {% for p in projects %}
-    <div class="proj-row {{ 'is-current' if current and current.id == p.id }}">
+    {# De-duplicate the resume control (BL-04): the project shown in the hero
+       above is omitted from the roster while it holds the hero. #}
+    {% set roster = projects | rejectattr('id', 'equalto', last_unfinished.id) | list if last_unfinished else projects %}
+    {% for p in roster %}
+    <div class="proj-row {{ 'is-current' if current and current.id == p.id }}" data-id="{{ p.id }}">
       <div class="proj-info">
         <div class="proj-name" dir="auto">{{ p.name }}
           {% if p.video %}<span class="proj-badge done">{{ t('projects.finished') }}</span>
@@ -35,15 +55,50 @@
         <form method="post" action="/projects/{{ p.id }}/open">
           <button type="submit" class="btn btn-secondary">{{ t('projects.open') if p.video else t('projects.continue_btn') }}</button>
         </form>
+        <button class="kebab proj-kebab" onclick="projMenu(event, '{{ p.id }}')" title="{{ t('review.more') }}" aria-label="{{ t('review.more') }}">&#8942;</button>
       </div>
     </div>
     {% else %}
-    <p class="occ-empty">{{ t('occasion.none') }}</p>
+    {% if not last_unfinished %}<p class="occ-empty">{{ t('occasion.none') }}</p>{% endif %}
     {% endfor %}
   </div>
-
-  <a class="add-dashed" href="/occasion/new">
-    <span class="add-plus">+</span> {{ t('occasion.new') }}
-  </a>
 </div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+{% endblock %}
+
+{% block script %}
+<script>
+function closeMenu(){ const m=document.getElementById('popmenu'); if(m) m.remove(); }
+function showMenu(anchor, items){
+  closeMenu();
+  const menu=document.createElement('div'); menu.className='popmenu'; menu.id='popmenu';
+  items.forEach(it=>{ const b=document.createElement('button'); b.className='popmenu-item'+(it.danger?' danger':''); b.textContent=it.label; b.onclick=(ev)=>{ev.stopPropagation(); closeMenu(); it.fn();}; menu.appendChild(b); });
+  document.body.appendChild(menu);
+  const r=anchor.getBoundingClientRect();
+  menu.style.top=(r.bottom+4+window.scrollY)+'px';
+  menu.style.left=Math.max(8, r.right-menu.offsetWidth+window.scrollX)+'px';
+  setTimeout(()=>document.addEventListener('click', closeMenu, {once:true}), 0);
+}
+function projMenu(e, id){
+  e.stopPropagation();
+  showMenu(e.currentTarget, [
+    { label: t('projects.rename'), fn: ()=>renameProj(id) },
+    { label: t('projects.delete'), danger:true, fn: ()=>deleteProj(id) },
+  ]);
+}
+async function renameProj(id){
+  const row=document.querySelector(`.proj-row[data-id="${id}"] .proj-name`);
+  const cur=row.firstChild.textContent.trim();
+  const name=prompt(t('projects.rename_prompt'), cur);
+  if(name==null || !name.trim()) return;
+  await fetch(`/projects/${id}/rename`, {method:'POST', body:new URLSearchParams({name})});
+  location.reload();
+}
+async function deleteProj(id){
+  if(!confirm(t('projects.delete_confirm'))) return;
+  await fetch(`/projects/${id}/delete`, {method:'POST'});
+  location.reload();
+}
+</script>
 {% endblock %}

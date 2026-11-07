@@ -11,13 +11,14 @@
     <div id="omp-list">
       {% for name in music_tracks %}
       <div class="music-row" data-name="{{ name }}">
-        <span class="music-name" dir="auto">{{ name }}</span>
+        <div class="drag-handle" draggable="true" tabindex="0" role="button"
+             aria-label="{{ t('setup.music.reorder') }}" title="{{ t('setup.music.reorder') }}">
+          <span class="dh-grip" aria-hidden="true">&#10287;</span>
+        </div>
+        <span class="music-name" dir="auto" title="{{ name }}">{{ name | humanize_track }}</span>
         <audio controls preload="none" src="/media/music/{{ name | urlencode }}"></audio>
-        <span class="music-actions">
-          <button type="button" onclick='ompMove({{ name | tojson }}, -1)' title="{{ t('setup.move_up') }}">&#9650;</button>
-          <button type="button" onclick='ompMove({{ name | tojson }}, 1)' title="{{ t('setup.move_down') }}">&#9660;</button>
-          <button type="button" onclick='ompDelete({{ name | tojson }})'>{{ t('setup.remove') }}</button>
-        </span>
+        <button type="button" class="kebab" aria-haspopup="true"
+                onclick='ompKebab(event, {{ name | tojson }})' title="{{ t('review.more') }}">&#8942;</button>
       </div>
       {% endfor %}
     </div>
@@ -55,20 +56,65 @@
 <script>
 function ompChosen(input){ const s=document.getElementById('omp-chosen'); const f=[...(input.files||[])]; s.textContent=f.length?f.map(x=>x.name).join(', '):s.dataset.empty; }
 function ompRows(){ return [...document.querySelectorAll('#omp-list .music-row')]; }
+// Readable track label (mirrors the server-side humanize_track filter).
+function ompHumanize(name){
+  if(!name) return '';
+  let s = name.indexOf('.')>=0 ? name.slice(0,name.lastIndexOf('.')) : name;
+  s = s.replace(/^\s*\d{1,3}\s*[._)\-]+\s*/,'').replace(/[_\-]+/g,' ').replace(/\s+/g,' ').trim();
+  if(!s) return (name.indexOf('.')>=0?name.slice(0,name.lastIndexOf('.')):name).trim()||name;
+  return s.split(' ').map(w=>(/^[\x00-\x7F]*$/.test(w)&&w===w.toLowerCase())?w.charAt(0).toUpperCase()+w.slice(1):w).join(' ');
+}
 function ompRender(names){
   const list=document.getElementById('omp-list'); list.innerHTML='';
   names.forEach(name=>{
     const row=document.createElement('div'); row.className='music-row'; row.dataset.name=name;
-    const nm=document.createElement('span'); nm.className='music-name'; nm.dir='auto'; nm.textContent=name;
+    const h=document.createElement('div'); h.className='drag-handle'; h.draggable=true; h.tabIndex=0;
+    h.setAttribute('role','button'); h.setAttribute('aria-label',window.t('setup.music.reorder')); h.title=window.t('setup.music.reorder');
+    h.innerHTML='<span class="dh-grip" aria-hidden="true">&#10287;</span>';
+    const nm=document.createElement('span'); nm.className='music-name'; nm.dir='auto'; nm.title=name; nm.textContent=ompHumanize(name);
     const au=document.createElement('audio'); au.controls=true; au.preload='none'; au.src='/media/music/'+encodeURIComponent(name);
-    const acts=document.createElement('span'); acts.className='music-actions';
-    const up=document.createElement('button'); up.type='button'; up.textContent='▲'; up.onclick=()=>ompMove(name,-1);
-    const dn=document.createElement('button'); dn.type='button'; dn.textContent='▼'; dn.onclick=()=>ompMove(name,1);
-    const rm=document.createElement('button'); rm.type='button'; rm.textContent=window.t('setup.remove'); rm.onclick=()=>ompDelete(name);
-    acts.append(up,dn,rm); row.append(nm,au,acts); list.appendChild(row);
+    const kb=document.createElement('button'); kb.type='button'; kb.className='kebab'; kb.setAttribute('aria-haspopup','true');
+    kb.title=window.t('review.more'); kb.innerHTML='&#8942;'; kb.onclick=(e)=>ompKebab(e,name);
+    row.append(h,nm,au,kb); list.appendChild(row);
   });
   document.getElementById('omp-empty').hidden = names.length>0;
 }
+// ⋮ overflow menu (same popmenu component as the Story workspace).
+function ompKebab(e, name){
+  e.stopPropagation(); ompCloseMenu();
+  const menu=document.createElement('div'); menu.className='popmenu'; menu.id='omp-popmenu';
+  const b=document.createElement('button'); b.className='popmenu-item danger'; b.textContent=window.t('setup.remove');
+  b.onclick=(ev)=>{ ev.stopPropagation(); ompCloseMenu(); ompDelete(name); };
+  menu.appendChild(b); document.body.appendChild(menu);
+  const r=e.currentTarget.getBoundingClientRect();
+  menu.style.top=(r.bottom+4+window.scrollY)+'px';
+  menu.style.left=Math.max(8, r.right-menu.offsetWidth+window.scrollX)+'px';
+  setTimeout(()=>document.addEventListener('click', ompCloseMenu, {once:true}), 0);
+}
+function ompCloseMenu(){ const m=document.getElementById('omp-popmenu'); if(m) m.remove(); }
+async function ompCommitOrder(){
+  const body=new URLSearchParams(); ompRows().forEach(r=>body.append('order', r.dataset.name));
+  await fetch('/setup/music/order',{method:'POST',body});
+}
+// Drag-handle + ↑/↓ reorder, delegated on the list (survives re-render).
+(function initOmpReorder(){
+  const list=document.getElementById('omp-list'); if(!list) return;
+  let dragging=null;
+  list.addEventListener('dragstart',(e)=>{ const h=e.target.closest('.drag-handle'); if(!h) return;
+    dragging=h.closest('.music-row'); e.dataTransfer.effectAllowed='move';
+    requestAnimationFrame(()=>dragging&&dragging.classList.add('dragging')); });
+  list.addEventListener('dragover',(e)=>{ if(!dragging) return; e.preventDefault();
+    const over=e.target.closest('.music-row'); if(!over||over===dragging) return;
+    const box=over.getBoundingClientRect(); (e.clientY>box.top+box.height/2?over.after(dragging):over.before(dragging)); });
+  list.addEventListener('drop',(e)=>{ if(dragging){ e.preventDefault(); ompCommitOrder(); } });
+  list.addEventListener('dragend',()=>{ if(dragging) dragging.classList.remove('dragging'); dragging=null; });
+  list.addEventListener('keydown',(e)=>{ const h=e.target.closest('.drag-handle'); if(!h) return;
+    if(e.key!=='ArrowUp'&&e.key!=='ArrowDown') return; e.preventDefault();
+    const row=h.closest('.music-row');
+    if(e.key==='ArrowUp'&&row.previousElementSibling) row.previousElementSibling.before(row);
+    else if(e.key==='ArrowDown'&&row.nextElementSibling) row.nextElementSibling.after(row);
+    else return; h.focus(); ompCommitOrder(); });
+})();
 async function ompRefresh(){ const d=await (await fetch('/occasion/music/list')).json(); ompRender(d.tracks||[]); }
 async function ompUpload(){
   const f=document.getElementById('omp-file'); if(!f.files||!f.files.length) return;
@@ -80,13 +126,6 @@ async function ompUpload(){
 async function ompDelete(name){
   if(!confirm(window.tf('setup.js.remove_confirm',{label:name}))) return;
   await fetch('/setup/music/'+encodeURIComponent(name)+'/delete',{method:'POST'}); ompRefresh();
-}
-async function ompMove(name,dir){
-  const names=ompRows().map(r=>r.dataset.name); const i=names.indexOf(name), j=i+dir;
-  if(i<0||j<0||j>=names.length) return;
-  names.splice(i,1); names.splice(j,0,name);
-  const body=new URLSearchParams(); names.forEach(n=>body.append('order',n));
-  await fetch('/setup/music/order',{method:'POST',body}); ompRefresh();
 }
 </script>
 {% endblock %}

@@ -1,7 +1,7 @@
-' Start Trip Video with NO console window - it runs in the system tray instead.
+' Start Memowheel with NO console window - it runs in the system tray instead.
 ' Double-click this. A small icon appears near the clock (Open / View log / Quit)
 ' and the app opens in your browser. For a debug run WITH a console, use
-' "Start Trip Video.bat" instead.
+' "Start Memowheel.bat" instead.
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 shell.CurrentDirectory = fso.GetParentFolderName(WScript.ScriptFullName)

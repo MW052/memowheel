@@ -90,11 +90,11 @@ def main() -> None:
         icon.stop()                # end the tray loop -> main() returns
 
     icon = pystray.Icon(
-        "tripvideo",
+        "memowheel",
         _icon_image(),
-        "Trip Video",
+        "Memowheel",
         menu=Menu(
-            MenuItem("Open Trip Video", on_open, default=True),
+            MenuItem("Open Memowheel", on_open, default=True),
             MenuItem("View log", on_view_log),
             MenuItem("Quit", on_quit),
         ),

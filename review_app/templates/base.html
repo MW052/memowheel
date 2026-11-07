@@ -11,6 +11,11 @@ window.T = {{ i18n_json | safe }};
 window.t = (k, d) => (window.T && window.T[k] != null ? window.T[k] : (d != null ? d : k));
 window.tf = (k, vars, d) => {
   let s = window.t(k, d);
+  // Pluralization mirror of the server t(): "singular|plural" picks singular only
+  // when vars.n === 1. Strings without a pipe pass through unchanged.
+  if (vars && vars.n != null && s.indexOf('|') >= 0) {
+    const p = s.split('|'); s = (+vars.n === 1) ? p[0] : p[p.length - 1];
+  }
   for (const key in (vars || {})) s = s.split('{' + key + '}').join(vars[key]);
   return s;
 };
@@ -19,7 +24,7 @@ window.tf = (k, vars, d) => {
 <body>
 {% set path = request.url.path %}
 {% set workspace = path.startswith('/review') or path.startswith('/preview') or path.startswith('/finish') %}
-{% set has_menu = workspace or path.startswith('/setup') or path.startswith('/trip') or path.startswith('/logs') or path.startswith('/people') or path.startswith('/gallery') or path.startswith('/occasion') %}
+{% set has_menu = workspace or path == '/' or path.startswith('/setup') or path.startswith('/trip') or path.startswith('/logs') or path.startswith('/people') or path.startswith('/gallery') or path.startswith('/occasion') %}
 
 <header class="app-header {{ 'is-workspace' if workspace else 'is-minimal' }}">
   <div class="ah-left">
@@ -43,11 +48,19 @@ window.tf = (k, vars, d) => {
         <div class="ah-menu-label">{{ t('feature.trip.name') }}</div>
         <a href="/trip">{{ t('projects.switch') }}</a>
         <a href="/review">{{ t('nav.story') }}</a>
-        <a href="/setup#step-1">{{ t('setup.wiz.step_photos') }}</a>
-        <a href="/setup#step-2">{{ t('setup.wiz.step_people') }}</a>
-        <a href="/setup#step-3">{{ t('setup.wiz.step_mood') }}</a>
-        <a href="/setup#step-4">{{ t('setup.wiz.step_music') }}</a>
-        <a href="/setup#step-5">{{ t('setup.wiz.step_import') }}</a>
+        {# Deep-step shortcuts stay available but are tucked under a disclosure so
+           the novice path (Projects / Story) is what the menu foregrounds; experts
+           reach any step in one extra click. VALIDATE-FIRST (BL-03): the choice of
+           disclosure-vs-flat, and whether to also disable not-yet-valid steps,
+           wants a fresh-user task before it's treated as settled. #}
+        <details class="ah-submenu" onclick="event.stopPropagation()">
+          <summary>{{ t('nav.jump_step') }}</summary>
+          <a href="/setup#step-1">{{ t('setup.wiz.step_photos') }}</a>
+          <a href="/setup#step-2">{{ t('setup.wiz.step_people') }}</a>
+          <a href="/setup#step-3">{{ t('setup.wiz.step_mood') }}</a>
+          <a href="/setup#step-4">{{ t('setup.wiz.step_music') }}</a>
+          <a href="/setup#step-5">{{ t('setup.wiz.step_import') }}</a>
+        </details>
         <hr>
         <a href="/occasion">{{ t('feature.occasion.name') }}</a>
         {% endif %}
@@ -64,7 +77,10 @@ window.tf = (k, vars, d) => {
     {% endif %}
     <a class="ah-brand" href="/"><b>{{ app_name }}</b>{% if workspace %}<span class="ah-sep">/</span><span class="ah-maker">{{ t('feature.occasion.name') if project_kind == 'occasion' else t('feature.trip.name') }}</span>{% endif %}</a>
     {% if workspace %}
-    <button class="ah-trip" type="button" aria-haspopup="true" onclick="toggleAppMenu(event)">{{ trip_name }}<span class="ah-caret">⌄</span></button>
+    <div class="ah-trip-wrap">
+      <button class="ah-trip" type="button" aria-haspopup="true" title="{{ trip_name }}" onclick="toggleTripMenu(event)"><span class="ah-tripname">{{ trip_name }}</span><span class="ah-caret">⌄</span></button>
+      <div class="ah-trip-menu" id="ah-trip-menu" hidden></div>
+    </div>
     {% endif %}
   </div>
 
@@ -101,6 +117,39 @@ function toggleAppMenu(e){
   if(willOpen) setTimeout(()=>document.addEventListener('click', closeAppMenu, {once:true}), 0);
 }
 function closeAppMenu(){ const m = document.getElementById('ah-menu'); if(m) m.hidden = true; }
+// Project switcher: the name's caret opens a focused list of projects to switch
+// to (not the whole app menu). Loaded once, on demand.
+async function toggleTripMenu(e){
+  e.stopPropagation();
+  const m = document.getElementById('ah-trip-menu'); if(!m) return;
+  if(!m.hidden){ m.hidden = true; return; }
+  if(!m.dataset.loaded){ await loadTripMenu(m); m.dataset.loaded = '1'; }
+  m.hidden = false;
+  setTimeout(()=>document.addEventListener('click', closeTripMenu, {once:true}), 0);
+}
+function closeTripMenu(){ const m = document.getElementById('ah-trip-menu'); if(m) m.hidden = true; }
+async function loadTripMenu(m){
+  let d; try { d = await (await fetch('/projects/list')).json(); } catch(_){ return; }
+  m.innerHTML = '';
+  (d.projects || []).forEach(p => {
+    if(p.current){
+      const cur = document.createElement('div');
+      cur.className = 'ah-trip-item current';
+      cur.textContent = '✓ ' + p.name;
+      m.appendChild(cur);
+    } else {
+      const f = document.createElement('form');
+      f.method = 'post'; f.action = '/projects/' + p.id + '/open'; f.className = 'ah-trip-item';
+      const b = document.createElement('button'); b.type = 'submit'; b.textContent = p.name;
+      f.appendChild(b); m.appendChild(f);
+    }
+  });
+  const hr = document.createElement('hr'); m.appendChild(hr);
+  const all = document.createElement('a');
+  all.href = d.all_url || '/trip'; all.className = 'ah-trip-all';
+  all.textContent = window.t('projects.all');
+  m.appendChild(all);
+}
 </script>
 {% block script %}{% endblock %}
 </body>

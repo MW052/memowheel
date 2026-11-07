@@ -3,6 +3,7 @@
 
 {% block content %}
 <div class="wiz-shell">
+<p class="wiz-context">{{ t('feature.trip.name') }} <span class="wiz-ctx-sep">·</span> <span class="wiz-ctx-name" dir="auto">{{ trip_name }}</span></p>
 {% if item_count %}
 <div class="wiz-resume">{{ t('setup.items_imported', n=item_count) }} · <a href="/review">{{ t('setup.go_review') }}</a></div>
 {% endif %}
@@ -10,6 +11,7 @@
 <!-- ============ STEP 1 · CHOOSE PHOTOS ============ -->
 <section class="wstep" data-step="1">
   <div class="card-xl wiz-card">
+    <span class="step-count">{{ t('setup.wiz.step_of', n=1, total=6) }}</span>
     <div class="step-head"><span class="step-badge">01</span><h2>{{ t('setup.wiz.photos_h') }}</h2></div>
     <p class="step-sub">{{ t('setup.wiz.photos_sub') }}</p>
 
@@ -100,23 +102,21 @@
       <div class="thumb-stack" id="thumb-stack" aria-hidden="true"></div>
     </div>
 
-    <div style="text-align:center;color:#a89c86;margin:14px 0;font-size:.9em;text-transform:uppercase;letter-spacing:.08em">{{ t('setup.wiz.or') }}</div>
-
-    <div class="upload-drop" id="upload-drop"
-         style="border:2px dashed #c9bfae;border-radius:12px;padding:18px;text-align:center;transition:border-color .15s,background .15s">
+    <!-- Secondary path: the primary way to start is picking the trip above; adding
+         loose files (drag or Choose files) is a subordinate "or" affordance so the
+         primary action stays obvious. Drop target + ids are unchanged. -->
+    <div class="upload-secondary" id="upload-drop">
       <input type="file" id="upload-files" multiple accept="image/*,video/*" style="display:none" onchange="uploadChosen(this.files)">
-      <p class="quality" style="margin:0 0 10px">{{ t('setup.wiz.drop_hint') }}</p>
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button type="button" class="btn btn-secondary" onclick="document.getElementById('upload-files').click()">{{ t('setup.wiz.choose_files') }}</button>
-      </div>
-      <div id="upload-progress" style="display:none;margin-top:12px">
+      <span class="upload-sec-text">{{ t('setup.wiz.drop_hint') }}</span>
+      <button type="button" class="btn btn-ghost" onclick="document.getElementById('upload-files').click()">{{ t('setup.wiz.choose_files') }}</button>
+      <div id="upload-progress" style="display:none;flex-basis:100%;margin-top:4px">
         <div class="progress"><div class="progress-bar" id="upload-bar"></div></div>
         <div id="upload-msg" class="quality" style="margin-top:6px"></div>
       </div>
     </div>
 
     <div class="wiz-nav">
-      <span></span>
+      <span class="wiz-nav-hint" id="s1-hint">{{ t('setup.wiz.pick_to_continue') }}</span>
       <button type="button" class="btn btn-primary btn-lg" id="s1-continue" onclick="goStep(2)" disabled>{{ t('setup.wiz.looks_right') }} &rarr;</button>
     </div>
   </div>
@@ -125,6 +125,7 @@
 <!-- ============ STEP 2 · PEOPLE ============ -->
 <section class="wstep" data-step="2">
   <div class="card-xl wiz-card">
+    <span class="step-count">{{ t('setup.wiz.step_of', n=2, total=6) }}</span>
     <div class="step-head"><span class="step-badge">02</span><h2>{{ t('setup.wiz.people_h') }}</h2></div>
     <p class="step-sub">{{ t('setup.wiz.people_sub') }}</p>
 
@@ -214,6 +215,7 @@
 <section class="wstep" data-step="3">
   <form id="mood-form">
     <div class="card-xl wiz-card">
+      <span class="step-count">{{ t('setup.wiz.step_of', n=3, total=6) }}</span>
       <div class="step-head"><span class="step-badge">03</span><h2>{{ t('setup.wiz.mood_h') }}</h2></div>
       <p class="step-sub">{{ t('setup.wiz.mood_sub') }}</p>
 
@@ -264,6 +266,7 @@
 <!-- ============ STEP 4 · MUSIC ============ -->
 <section class="wstep" data-step="4">
   <div class="card-xl wiz-card">
+    <span class="step-count">{{ t('setup.wiz.step_of', n=4, total=6) }}</span>
     <div class="step-head"><span class="step-badge">04</span><h2>{{ t('setup.wiz.music_h') }}</h2></div>
     <p class="step-sub">{{ t('setup.wiz.music_sub') }}</p>
 
@@ -284,16 +287,22 @@
 
     <div id="music-manager" {% if not music_tracks %}hidden{% endif %}>
       {% if music_tracks %}
+      {# One reorder affordance app-wide: the drag handle from the Story
+         workspace (keyboard-operable here with ↑/↓), and the ⋮ overflow menu
+         used by rosters/moments for Remove — so Music no longer invents its own
+         ▲▼ control. The raw filename stays in data-name for every action; the
+         visible label is humanized for readability. #}
       <div id="music-list">
         {% for name in music_tracks %}
         <div class="music-row" data-name="{{ name }}">
-          <span class="music-name" dir="auto">{{ name }}</span>
+          <div class="drag-handle" draggable="true" tabindex="0" role="button"
+               aria-label="{{ t('setup.music.reorder') }}" title="{{ t('setup.music.reorder') }}">
+            <span class="dh-grip" aria-hidden="true">&#10287;</span>
+          </div>
+          <span class="music-name" dir="auto" title="{{ name }}">{{ name | humanize_track }}</span>
           <audio controls preload="none" src="/media/music/{{ name | urlencode }}"></audio>
-          <span class="music-actions">
-            <button type="button" onclick='moveMusic({{ name | tojson }}, -1)' title="{{ t('setup.move_up') }}">&#9650;</button>
-            <button type="button" onclick='moveMusic({{ name | tojson }}, 1)' title="{{ t('setup.move_down') }}">&#9660;</button>
-            <button type="button" onclick='deleteMusic({{ name | tojson }})'>{{ t('setup.remove') }}</button>
-          </span>
+          <button type="button" class="kebab" aria-haspopup="true"
+                  onclick='musicKebab(event, {{ name | tojson }})' title="{{ t('review.more') }}">&#8942;</button>
         </div>
         {% endfor %}
       </div>
@@ -335,6 +344,7 @@
 <!-- ============ STEP 5 · IMPORT ============ -->
 <section class="wstep" data-step="5">
   <div class="card-xl wiz-card">
+    <span class="step-count">{{ t('setup.wiz.step_of', n=5, total=6) }}</span>
     <div class="step-head"><span class="step-badge">05</span><h2>{{ t('setup.wiz.import_h') }}</h2></div>
     <p class="step-sub">{{ t('setup.wiz.import_sub') }}</p>
 
@@ -362,6 +372,7 @@
 <!-- ============ STEP 6 · FINISH ============ -->
 <section class="wstep" data-step="6">
   <div class="card-xl wiz-card wiz-finish">
+    <span class="step-count">{{ t('setup.wiz.step_of', n=6, total=6) }}</span>
     <div class="step-head"><span class="step-badge">06</span><h2>{{ t('setup.wiz.finish_h') }}</h2></div>
     <p class="step-sub" id="finish-summary">{{ t('setup.wiz.finish_sub') }}</p>
     <a class="btn btn-primary btn-lg" href="/review">{{ t('setup.wiz.open_review') }}</a>
@@ -393,7 +404,10 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
       {{ t('setup.adv.output') }}
     </button>
-    <button type="button" class="btn btn-secondary adv-tile" title="{{ t('setup.adv.reset_tip') }}" onclick="openAdvModal('reset')">
+    {# Destructive: set apart from the benign settings tiles with danger styling
+       so "Start over" (it archives the whole project) can't be mistaken for one
+       more setting. Still confirmed before acting. #}
+    <button type="button" class="btn btn-secondary adv-tile adv-tile-danger" title="{{ t('setup.adv.reset_tip') }}" onclick="openAdvModal('reset')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
       {{ t('setup.start_over') }}
     </button>
@@ -503,7 +517,7 @@
         <p class="hint">{{ t('setup.start_over_hint_pre') }}<code>data/archive/</code>{{ t('setup.start_over_hint_post') }}</p>
       </div>
       <div class="adv-modal-foot">
-        <button type="button" class="btn btn-ghost" onclick="newTrip()">{{ t('setup.new_trip') }}</button>
+        <button type="button" class="btn btn-danger" onclick="newTrip()">{{ t('setup.new_trip') }}</button>
       </div>
     </div>
   </div>
@@ -511,9 +525,10 @@
 </div>
 
 <!-- FOLDER PICKER -->
-<div id="picker" class="picker" style="display:none">
+<div id="picker" class="picker" style="display:none" onclick="if(event.target===this)closePicker()">
   <div class="picker-box">
     <div class="picker-path" id="picker-path"></div>
+    <div class="picker-hint">{{ t('setup.picker_hint') }}</div>
     <div class="picker-list" id="picker-list"></div>
     <div class="picker-actions">
       <button class="btn btn-secondary" onclick="closePicker()">{{ t('setup.cancel') }}</button>
@@ -583,6 +598,8 @@ function updateContinueGate() {
   let ok = scanned && scannedCount > 0;
   if (findMode() === 'place') ok = scanned && placesSelected().length > 0;
   document.getElementById('s1-continue').disabled = !ok;
+  const hint = document.getElementById('s1-hint');
+  if (hint) hint.style.visibility = ok ? 'hidden' : 'visible';
 }
 
 // ---- step 1 (place mode): discover places from GPS, pick which are the trip ----
@@ -669,7 +686,7 @@ const MEDIA_RE = /\.(jpe?g|png|mp4|mov|avi)$/i;
   const dz = document.getElementById('upload-drop');
   if (!dz) return;
   const hi = () => { dz.style.borderColor = '#C0392B'; dz.style.background = 'rgba(192,57,43,.05)'; };
-  const lo = () => { dz.style.borderColor = '#c9bfae'; dz.style.background = ''; };
+  const lo = () => { dz.style.borderColor = ''; dz.style.background = ''; };  // '' -> CSS resting border
   ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); hi(); }));
   ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); lo(); }));
   dz.addEventListener('drop', async e => {
@@ -975,7 +992,7 @@ function closeAllAdvModals() { document.querySelectorAll('.adv-modal').forEach(m
 function collapseAdvanced() { const p = document.getElementById('adv-panel'); if (p) p.open = false; closeAllAdvModals(); }
 window.addEventListener('hashchange', collapseAdvanced);
 document.getElementById('ah-menu')?.addEventListener('click', (e) => { if (e.target.closest('a')) collapseAdvanced(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllAdvModals(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeAllAdvModals(); closePicker(); } });
 async function testLlm() {
   const el = document.getElementById('llm-test-result'); el.textContent = t('setup.js.testing');
   const d = await (await fetch('/setup/test-llm', { method: 'POST' })).json();
@@ -1003,15 +1020,63 @@ async function deleteMusic(name) {
   await fetch('/setup/music/' + encodeURIComponent(name) + '/delete', { method: 'POST' });
   location.hash = '#step-4'; location.reload();
 }
-async function moveMusic(name, dir) {
+// ⋮ overflow menu for a track (same popmenu component as the Story workspace).
+function musicKebab(e, name) {
+  e.stopPropagation();
+  musicCloseMenu();
+  const menu = document.createElement('div'); menu.className = 'popmenu'; menu.id = 'music-popmenu';
+  const b = document.createElement('button'); b.className = 'popmenu-item danger';
+  b.textContent = t('setup.remove');
+  b.onclick = (ev) => { ev.stopPropagation(); musicCloseMenu(); deleteMusic(name); };
+  menu.appendChild(b);
+  document.body.appendChild(menu);
+  const r = e.currentTarget.getBoundingClientRect();
+  menu.style.top = (r.bottom + 4 + window.scrollY) + 'px';
+  menu.style.left = Math.max(8, r.right - menu.offsetWidth + window.scrollX) + 'px';
+  setTimeout(() => document.addEventListener('click', musicCloseMenu, { once: true }), 0);
+}
+function musicCloseMenu() { const m = document.getElementById('music-popmenu'); if (m) m.remove(); }
+// Persist the current visual order of the track rows.
+async function commitMusicOrder() {
   const names = [...document.querySelectorAll('#music-list .music-row')].map(r => r.dataset.name);
-  const i = names.indexOf(name), j = i + dir;
-  if (i < 0 || j < 0 || j >= names.length) return;
-  names.splice(i, 1); names.splice(j, 0, name);
   const body = new URLSearchParams(); names.forEach(n => body.append('order', n));
   await fetch('/setup/music/order', { method: 'POST', body });
-  location.hash = '#step-4'; location.reload();
 }
+// Reorder by dragging the handle (mirrors the Story workspace), scoped to the
+// music list; also keyboard-operable via ↑/↓ on a focused handle so reordering
+// never depends on a mouse.
+(function initMusicReorder() {
+  const list = document.getElementById('music-list');
+  if (!list) return;
+  let dragging = null;
+  list.addEventListener('dragstart', (e) => {
+    const h = e.target.closest('.drag-handle'); if (!h) return;
+    dragging = h.closest('.music-row');
+    e.dataTransfer.effectAllowed = 'move';
+    requestAnimationFrame(() => dragging && dragging.classList.add('dragging'));
+  });
+  list.addEventListener('dragover', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
+    const over = e.target.closest('.music-row');
+    if (!over || over === dragging) return;
+    const box = over.getBoundingClientRect();
+    (e.clientY > box.top + box.height / 2 ? over.after(dragging) : over.before(dragging));
+  });
+  list.addEventListener('drop', (e) => { if (dragging) { e.preventDefault(); commitMusicOrder(); } });
+  list.addEventListener('dragend', () => { if (dragging) dragging.classList.remove('dragging'); dragging = null; });
+  list.addEventListener('keydown', (e) => {
+    const h = e.target.closest('.drag-handle'); if (!h) return;
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const row = h.closest('.music-row');
+    if (e.key === 'ArrowUp' && row.previousElementSibling) row.previousElementSibling.before(row);
+    else if (e.key === 'ArrowDown' && row.nextElementSibling) row.nextElementSibling.after(row);
+    else return;
+    h.focus();
+    commitMusicOrder();
+  });
+})();
 
 // ---- itinerary ----
 async function uploadItinerary(e) {
@@ -1029,8 +1094,28 @@ async function uploadItinerary(e) {
 
 // ---- folder picker ----
 let pickerTarget = null, pickerPath = null;
-function openPicker(targetId) { pickerTarget = targetId; loadDir(document.getElementById(targetId).value || DEFAULT_START); document.getElementById('picker').style.display = 'flex'; }
-function closePicker() { document.getElementById('picker').style.display = 'none'; }
+function openPicker(targetId) {
+  pickerTarget = targetId;
+  loadDir(document.getElementById(targetId).value || DEFAULT_START);
+  const m = document.getElementById('picker');
+  m.style.display = 'flex';
+  m._lastFocus = document.activeElement;
+  setTimeout(() => { const u = document.getElementById('picker-use'); if (u) u.focus(); }, 0);
+}
+function closePicker() {
+  const m = document.getElementById('picker');
+  m.style.display = 'none';
+  if (m._lastFocus && m._lastFocus.focus) m._lastFocus.focus();
+}
+// Keep Tab focus inside the picker while it's open (Esc/overlay also dismiss it).
+document.getElementById('picker')?.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const f = [...e.currentTarget.querySelectorAll('button:not([disabled])')].filter(el => el.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 const COMPUTER_ROOT = '::computer';
 function pickerRow(text) { const el = document.createElement('div'); el.className = 'picker-item'; el.textContent = text; return el; }
 async function loadDir(path) {
@@ -1047,7 +1132,13 @@ async function loadDir(path) {
   // own absolute path (server-provided) so drives and folders work the same way.
   d.dirs.forEach(entry => { const row = pickerRow((atComputer ? '💽 ' : '📁 ') + entry.name); row.onclick = () => loadDir(entry.path); list.appendChild(row); });
   // "This PC" itself isn't a folder you can import - only real folders are selectable.
-  const useBtn = document.getElementById('picker-use'); if (useBtn) useBtn.disabled = atComputer;
+  // Name the folder in the button so it's unambiguous which one "Use" will take.
+  const useBtn = document.getElementById('picker-use');
+  if (useBtn) {
+    useBtn.disabled = atComputer;
+    const leaf = (d.path || '').split(/[\\/]/).filter(Boolean).pop();
+    useBtn.textContent = (atComputer || !leaf) ? t('setup.use_folder') : tf('setup.use_named', { name: leaf });
+  }
 }
 function usePickerFolder() {
   if (pickerPath === COMPUTER_ROOT) return;  // pick a real folder, not the whole PC

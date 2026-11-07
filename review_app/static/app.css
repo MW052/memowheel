@@ -7,7 +7,7 @@
 @font-face{font-family:'Cutive Mono';src:url('/static/fonts/CutiveMono-Regular.ttf') format('truetype');font-weight:400;font-display:swap;}
 
 :root{
-  --paper:#F6F1E7; --card:#FEFDF9; --ink:#241F1B; --muted:#7A716A;
+  --paper:#F6F1E7; --card:#FEFDF9; --ink:#241F1B; --muted:#6E655D; /* AA ≥4.5:1 on paper (was #7A716A, failed at small sizes) */
   --cream:#F7F1E6; /* light warm off-white, for text/controls on the dark lightbox overlay */
   --label:#574E47; /* darker than --muted: readable field labels/captions (~6:1 on card) */
   --n1:#EAE3D6; --n2:#DBD2C4; --n3:#A89C8D;
@@ -52,8 +52,10 @@ body{
 .ah-sep{color:var(--n3)}
 .ah-maker{color:var(--muted);font-weight:600}
 .ah-trip{background:transparent;border:none;cursor:pointer;display:flex;align-items:center;gap:7px;
-  font-family:var(--serif);font-size:18px;font-weight:700;color:var(--ink);padding:4px 6px;border-radius:var(--r-sm)}
+  font-family:var(--serif);font-size:18px;font-weight:700;color:var(--ink);padding:4px 6px;border-radius:var(--r-sm);
+  min-width:0;max-width:100%}
 .ah-trip:hover{background:var(--n1)}
+.ah-tripname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .ah-caret{color:var(--n3);font-size:13px}
 .ah-tabs{display:flex;gap:22px;flex:0 0 auto}
 .ah-tab{font-family:var(--sans);font-size:15px;font-weight:600;color:var(--muted);text-decoration:none;
@@ -72,16 +74,49 @@ body{
   color:var(--n3);padding:6px 12px 4px}
 html[lang="he"] .ah-menu-label{font-family:var(--sans);letter-spacing:normal;text-transform:none;font-weight:700;font-size:11px}
 .ah-menu hr{border:none;border-top:1px solid var(--n1);margin:5px 4px}
+/* deep-step shortcuts, tucked under a disclosure so the menu foregrounds the
+   novice path (Projects / Story). Steps read as indented secondary items. */
+.ah-submenu>summary{list-style:none;cursor:pointer;color:var(--muted);font-size:13px;
+  padding:9px 12px;border-radius:var(--r-sm);display:flex;align-items:center;gap:6px}
+.ah-submenu>summary::-webkit-details-marker{display:none}
+.ah-submenu>summary::before{content:"›";display:inline-block;transition:transform .12s ease;color:var(--n3)}
+.ah-submenu[open]>summary::before{transform:rotate(90deg)}
+.ah-submenu>summary:hover{background:var(--n1);color:var(--ink)}
+.ah-submenu a{display:block;font-size:14px;padding-inline-start:26px}
+/* project switcher dropdown (the name's caret) */
+.ah-trip-wrap{position:relative;min-width:0;display:flex}
+.ah-trip-menu{position:absolute;top:calc(100% + 6px);inset-inline-start:0;z-index:80;background:var(--card);
+  border:1px solid var(--n1);border-radius:var(--r-md);box-shadow:var(--shadow);padding:6px;
+  min-width:220px;max-width:320px;max-height:70vh;overflow:auto;display:flex;flex-direction:column}
+.ah-trip-menu[hidden]{display:none}
+.ah-trip-item{margin:0}
+.ah-trip-item button{width:100%;text-align:start;background:transparent;border:none;cursor:pointer;
+  color:var(--ink);font-size:14.5px;font-weight:600;padding:9px 12px;border-radius:var(--r-sm)}
+.ah-trip-item button:hover{background:var(--n1);color:var(--terra)}
+.ah-trip-item.current{color:var(--muted);font-size:14.5px;font-weight:700;padding:9px 12px}
+.ah-trip-menu hr{border:none;border-top:1px solid var(--n1);margin:5px 4px}
+.ah-trip-all{text-decoration:none;color:var(--terra);font-size:14px;padding:8px 12px;border-radius:var(--r-sm)}
+.ah-trip-all:hover{background:var(--n1)}
 .ah-save{display:flex;align-items:center;gap:6px;color:var(--ok);font-size:14px;font-weight:600;white-space:nowrap}
 .ah-lang{display:flex;align-items:center;gap:7px;color:var(--muted);text-decoration:none;font-size:14px;font-weight:600}
 .ah-lang:hover{color:var(--terra)}
-.ah-lang .lang-dim{color:var(--n3)}
+.ah-lang .lang-dim{color:var(--muted)}
+.ah-lang span:not(.lang-dim){color:var(--ink)}  /* active language stands out (both AA) */
 .ah-langsep{color:var(--n2)}
 .app-header.is-minimal .ah-brand b{font-size:16px}
 @media(max-width:720px){
   .app-header{gap:10px;padding:10px 14px;flex-wrap:wrap}
+  /* brand + (long, often Hebrew) project name get the whole first row; the name
+     truncates with an ellipsis instead of overprinting the Saved / language
+     controls, which wrap to their own row below. */
+  .app-header .ah-left{flex:0 0 100%;min-width:0}
+  .ah-trip{flex:1 1 auto;min-width:0}
+  .app-header .ah-right{flex:1 1 100%;justify-content:flex-start;gap:16px}
   .ah-tabs{order:3;flex:1 1 100%;justify-content:center;gap:18px;padding-top:6px;border-top:1px solid var(--n1)}
-  .ah-maker,.ah-langsep,.ah-lang span:not(.lang-dim){}
+}
+@media(max-width:480px){
+  /* reclaim room for the project name: collapse the maker breadcrumb to the brand */
+  .ah-sep,.ah-maker{display:none}
 }
 
 h1,h2,h3{font-family:var(--serif);color:var(--ink);margin:0;font-weight:700}
@@ -97,6 +132,11 @@ button{font-family:var(--sans)}
 .btn,button.btn{font-family:var(--sans);font-weight:600;font-size:15px;border-radius:var(--r-sm);
   padding:10px 18px;border:1px solid transparent;cursor:pointer;transition:transform .12s ease,background .12s ease,box-shadow .12s ease}
 .btn:hover{transform:translateY(-1px)}
+/* Disabled buttons must LOOK disabled: muted, no lift, not-allowed cursor.
+   (Previously only a few specific buttons styled their disabled state, so a
+   gated primary button looked fully clickable — UX audit finding 1.) */
+.btn:disabled,.btn[disabled],.btn:disabled:hover,.btn[disabled]:hover{
+  opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
 .btn-primary{background:var(--terra);color:#fff;box-shadow:0 2px 8px rgba(194,91,74,.28)}
 .btn-primary:hover{background:var(--terra-dk)}
 /* .btn.btn-secondary (not .btn-secondary): the base `button.btn` rule sets a
@@ -106,6 +146,10 @@ button{font-family:var(--sans)}
 .btn.btn-secondary{background:transparent;color:var(--ink);border-color:var(--n2)}
 .btn.btn-secondary:hover{border-color:var(--n3)}
 .btn-ghost{background:transparent;color:var(--terra);border-color:transparent;padding-left:8px;padding-right:8px}
+/* destructive secondary action (e.g. Move files out of their folders): error-red,
+   clearly distinct from the terracotta primary so it never reads as the default. */
+.btn.btn-danger{background:transparent;color:var(--err);border-color:rgba(178,74,58,.5)}
+.btn.btn-danger:hover{background:rgba(178,74,58,.08);border-color:var(--err)}
 .btn-lg{font-size:16px;padding:13px 24px}
 .btn-pill{border-radius:99px}
 
@@ -122,6 +166,19 @@ button{font-family:var(--sans)}
 .step-head{display:flex;align-items:center;gap:16px;margin-bottom:6px}
 .step-head h2{font-size:32px;font-weight:900;letter-spacing:-.4px}
 .step-sub{color:var(--muted);font-size:16.5px;margin:0 0 22px;max-width:60ch}
+/* "Step N of 6" progress kicker above each step head */
+.step-count{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--n3);margin:0 0 8px}
+/* which project you're setting up (context on the wizard) */
+.wiz-context{color:var(--muted);font-size:14px;margin:0 0 14px}
+.wiz-context .wiz-ctx-sep{color:var(--n3);margin:0 6px}
+.wiz-context .wiz-ctx-name{color:var(--ink);font-weight:600}
+/* hint shown next to a gated primary button (e.g. "choose a folder first") */
+.wiz-nav-hint{color:var(--muted);font-size:14px}
+/* folder-picker clarifier: rows navigate, the button uses the open folder */
+.picker-hint{color:var(--muted);font-size:13px;margin:0 0 10px}
+/* new-project/occasion affordance moved above the list for discoverability */
+.new-proj-top{margin-bottom:18px}
 
 /* soft peach info callout with a gold icon */
 .info-note{display:flex;gap:12px;align-items:flex-start;background:var(--peach);
@@ -307,6 +364,12 @@ a.feature-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-
 .music-actions{display:flex;gap:6px}
 .music-actions button{font-size:13px;font-weight:600;padding:5px 10px;border:1px solid var(--n2);border-radius:var(--r-sm);background:var(--card);color:var(--ink);cursor:pointer}
 .music-actions button:hover{border-color:var(--terra);color:var(--terra)}
+/* Music rows adopt the Story workspace's drag handle (compact, inline) for the
+   one reorder affordance, plus the ⋮ kebab for Remove. */
+.music-row .drag-handle{height:30px;width:30px;margin:0;flex:0 0 auto}
+.music-row .drag-handle:focus-visible{outline:2px solid var(--terra);outline-offset:2px}
+.music-row.dragging{opacity:.5}
+.music-row .kebab{flex:0 0 auto}
 .music-sources{margin-top:14px;font-size:14px}
 .music-sources summary{cursor:pointer;font-weight:600;color:var(--terra)}
 .music-sources ul{margin:8px 0 0;padding-left:18px}
@@ -402,6 +465,15 @@ input[type=file]{font-family:var(--sans);font-size:14px;color:var(--muted)}
 .crop-h.br{right:-9px;bottom:-9px;cursor:nwse-resize}
 .lightbox-close{position:fixed;top:18px;right:24px;font-size:34px;line-height:1;color:var(--cream);
   background:transparent;border:none;cursor:pointer}
+/* prev/next through a moment's photos (BL-20) */
+.lb-nav{position:fixed;top:50%;transform:translateY(-50%);z-index:101;
+  width:52px;height:72px;display:flex;align-items:center;justify-content:center;
+  font-size:40px;line-height:1;color:var(--cream);background:rgba(20,17,15,.4);
+  border:none;border-radius:10px;cursor:pointer;transition:background .12s ease}
+.lb-nav:hover{background:rgba(20,17,15,.72)}
+.lb-prev{inset-inline-start:18px}
+.lb-next{inset-inline-end:18px}
+.lb-nav[hidden]{display:none}
 
 /* toast (bottom-centre, optional Undo) + inline autosave note (review) */
 .toasts{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:130;
@@ -476,6 +548,15 @@ html[lang="he"] .proj-section-label{font-family:var(--sans);letter-spacing:norma
 .pf-actions .btn{text-decoration:none}
 .pf-modes-hint{color:var(--muted);font-size:13px;margin:10px auto 0;max-width:60ch;line-height:1.5}
 .pf-done-note{color:var(--ok);font-size:15px;font-weight:600;margin:12px auto 0}
+/* truthful render state (Preview/Finish) */
+.pf-freshness{font-size:14.5px;font-weight:600;margin:4px auto 0}
+.pf-freshness.is-fresh{color:var(--ok)}
+.pf-freshness.is-fresh::before{content:"✓ "}
+.pf-freshness.is-stale{color:var(--warn)}
+.pf-freshness.is-stale::before{content:"● "}
+.pf-stale-badge{color:var(--warn)}
+.pf-build-reason{color:var(--muted);font-size:13px;margin:10px auto 0}
+.pf-render-scope{color:var(--label);font-weight:600}
 .pf-empty{background:var(--card);border:1px dashed var(--n2);border-radius:var(--r-lg);
   padding:34px 24px;color:var(--muted);font-size:15.5px;margin:10px 0}
 .pf-progress{max-width:520px;margin:0 auto}
@@ -519,6 +600,7 @@ html[lang="he"] .ov-label{font-family:var(--sans);letter-spacing:normal;text-tra
 .ts-form textarea{width:100%;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--paper);
   border:1px solid var(--n2);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:8px}
 .ts-form .btn{font-size:13px;padding:7px 12px}
+.ts-autosave{display:inline-block;margin-top:5px;font-size:12px;color:var(--muted)}
 
 /* day header + tiles */
 .ws-h2{font-family:var(--serif);font-size:30px;font-weight:900;letter-spacing:-.4px;margin:0}
@@ -658,6 +740,13 @@ html[lang="he"] .finish .done-kicker{font-family:var(--sans);letter-spacing:norm
 .card:hover .card-select,.card.selected .card-select{opacity:1}
 .card-select input{width:16px;height:16px;accent-color:var(--terra);cursor:pointer;margin:0}
 .card.selected .card-media{box-shadow:0 0 0 3px var(--terra) inset}
+/* Unassigned bucket: the flat .item cards carry the same checkbox, shown always
+   (triage is the whole point here) so the bucket can be cleared in bulk via the
+   bulk bar instead of one card at a time. */
+.item{position:relative}
+#orphan-cluster .card-select{opacity:1}
+#orphan-cluster .item.selected{outline:3px solid var(--terra);outline-offset:-3px}
+.orphan-tools{display:flex;gap:10px;align-items:center;margin:0 0 14px}
 .card.selected{border-radius:var(--r-md);outline:2px solid var(--terra);outline-offset:1px}
 
 .bulk-bar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:120;
@@ -746,6 +835,12 @@ html[lang="he"] .scan-dates{font-family:var(--sans)}
 .find-mode-card .tile-desc{text-align:center;font-size:13px}
 .mode-hint{color:var(--muted);font-size:14px;margin:0 0 12px}
 @media(max-width:640px){.find-modes{grid-template-columns:1fr}}
+/* step 01 secondary "or add files" path — deliberately quiet so the primary
+   find-your-trip card above stays the obvious action. */
+.upload-secondary{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+  margin-top:18px;padding:10px 14px;border:1px dashed var(--n2);border-radius:var(--r-sm);
+  background:transparent;transition:border-color .15s,background .15s}
+.upload-sec-text{margin:0;font-size:13px;color:var(--muted)}
 
 /* step 1: discovered-places checklist (find by place) */
 .places-block > label{display:block;font-weight:600;margin-bottom:2px}
@@ -777,8 +872,8 @@ html[lang="he"] .scan-dates{font-family:var(--sans)}
 .add-person-fields{margin-top:12px}
 
 /* app version (quiet): foot of the header menu, and under the hub title */
-.ah-version{padding:8px 12px 4px;color:var(--n3);font-size:12px;letter-spacing:.2px}
-.home-version{color:var(--n3);font-size:13px;margin:-4px 0 0}
+.ah-version{padding:8px 12px 4px;color:var(--muted);font-size:12px;letter-spacing:.2px}
+.home-version{color:var(--muted);font-size:13px;margin:-4px 0 0}
 
 /* guided add-person (narrated: name -> photos -> add) */
 .add-person-guided{margin-top:12px;background:var(--card);border:1px solid var(--n1);
@@ -876,6 +971,11 @@ html[lang="he"] .import-folder-line{font-family:var(--sans)}
 .adv-grid{display:flex;flex-wrap:wrap;gap:10px;padding-bottom:8px}
 .adv-tile{display:inline-flex;align-items:center;gap:8px}
 .adv-tile svg{flex:none;opacity:.75}
+/* "Start over" archives the whole project: set it apart from the benign
+   settings tiles with danger styling so it can't be mistaken for one. */
+.btn.adv-tile-danger{color:var(--err);border-color:rgba(178,74,58,.45)}
+.btn.adv-tile-danger svg{opacity:1}
+.btn.adv-tile-danger:hover{background:rgba(178,74,58,.08);border-color:var(--err);color:var(--err)}
 /* settings modals reuse the .picker overlay; give them a roomier box with a
    sticky header/footer and a scrollable body for the longer place-finding form */
 .adv-modal{z-index:120}
@@ -950,6 +1050,16 @@ html[lang="he"] .import-folder-line{font-family:var(--sans)}
 .pg-chip-x{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;
   line-height:1;padding:0 0 0 2px;width:auto}
 .pg-chip-x:hover{color:var(--err)}
+/* reference-face avatar (BL-32): round thumbnail with an initial fallback
+   behind it; the <img> covers the initial, and its onerror removes it so the
+   initial shows when a person has no readable reference photo. */
+.pg-avatar{position:relative;width:34px;height:34px;flex:0 0 auto;align-self:center;
+  border-radius:50%;overflow:hidden;background:var(--n2);display:inline-flex;
+  align-items:center;justify-content:center}
+.pg-avatar-i{font-weight:700;color:var(--muted);font-size:14px;line-height:1}
+.pg-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pg-avatar-sm{width:20px;height:20px}
+.pg-avatar-sm .pg-avatar-i{font-size:10px}
 .pg-select{font-size:13px;padding:6px 8px;border:1px solid var(--n2);border-radius:var(--r-sm);
   background:var(--card);max-width:100%}
 .pg-new-group{display:flex;gap:10px;margin-bottom:16px}
@@ -1000,6 +1110,9 @@ html[lang="he"] .import-folder-line{font-family:var(--sans)}
 /* ---- Find in library (gallery) ---- */
 .gl-tier{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
 .gl-tier select{font-size:14px;padding:7px 9px;border:1px solid var(--n2);border-radius:var(--r-sm);background:var(--card)}
+/* sensitivity is inert for the tag-based project scopes (BL-33) */
+.gl-tier.is-disabled{opacity:.55}
+.gl-tier-note{font-size:12px;color:var(--muted);font-style:italic}
 .gl-libs{gap:8px}
 .gl-lib{display:flex;align-items:center;justify-content:space-between;gap:10px;
   border:1px solid var(--n1);border-radius:var(--r-sm);padding:8px 12px;background:var(--paper)}
@@ -1018,6 +1131,7 @@ html[lang="he"] .import-folder-line{font-family:var(--sans)}
 .gl-export input[name=dest]{flex:1 1 240px;min-width:0;font-size:14px;padding:8px 10px;
   border:1px solid var(--n2);border-radius:var(--r-sm);background:var(--card)}
 .gl-selall{display:inline-flex;align-items:center;gap:6px;font-size:14px}
+.gl-count{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
 
 .gl-tile{position:relative}
 .gl-pick{position:absolute;top:6px;left:6px;z-index:2;background:rgba(254,253,249,.85);
@@ -1073,6 +1187,13 @@ html[lang="he"] .import-folder-line{font-family:var(--sans)}
 .occ-field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
 .occ-err{color:var(--err);font-size:13px}
 .occ-hint{color:var(--muted);font-size:13px;margin:-6px 0 14px}
+/* matched-honoree chip: confirms the typed name resolved to a real person/group */
+.occ-honoree-chip{display:inline-flex;align-items:center;gap:7px;align-self:flex-start;
+  background:rgba(60,140,90,.10);border:1px solid rgba(60,140,90,.35);color:var(--ink);
+  border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600}
+.occ-honoree-chip .ohc-check{color:var(--ok);font-weight:700}
+.ohc-enroll{color:var(--terra);text-decoration:none;font-weight:600;margin-inline-start:6px}
+.ohc-enroll:hover{text-decoration:underline}
 .occ-covers{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .occ-covers input[type=file]{font-size:14px;color:var(--label)}
 .occ-lib{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}

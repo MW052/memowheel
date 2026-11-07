@@ -1,9 +1,9 @@
 @echo off
-title Trip Video
+title Memowheel
 cd /d "%~dp0"
 echo.
-echo   Starting Trip Video (console / debug mode)...
-echo   For an everyday run with NO window, use "Start Trip Video.vbs" instead -
+echo   Starting Memowheel (console / debug mode)...
+echo   For an everyday run with NO window, use "Start Memowheel.vbs" instead -
 echo   it puts a small icon in the system tray (Open / View log / Quit).
 echo.
 echo   A browser window will open in a few seconds.
@@ -16,5 +16,5 @@ if %errorlevel%==0 (
     python manage.py serve
 )
 echo.
-echo   Trip Video has stopped. You can close this window.
+echo   Memowheel has stopped. You can close this window.
 pause

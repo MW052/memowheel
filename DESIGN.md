@@ -59,7 +59,9 @@ meaningful; the photos are the color.
   stamp motif. Use sparingly. Hover/darker: `#A8452F`.
 - **Secondary:** `#3E5C76` ink-indigo — dates, links, quiet secondary info.
 - **Neutrals (light → dark):** paper `#FBF7F0`, card `#FEFCF8`, `#EDE6DA`,
-  `#D8CEC0`, `#A89C8D`, muted text `#7A716A`, ink text `#2B2724`.
+  `#D8CEC0`, `#A89C8D`, muted text `#6E655D` (darkened from `#7A716A` so small
+  text meets WCAG AA ≥4.5:1 on paper — see Decisions Log 2026-11-03), ink text
+  `#2B2724`.
 - **Semantic (muted to fit):** success `#5E7D5A`, warning `#C89A3C`,
   error `#B24A3A`, info `#3E5C76`.
 - **Video surfaces:** cream title card `#F7F1E6` (default) and espresso title
@@ -239,3 +241,4 @@ never a screen-filling spectacle.
 | 2026-07-24 | Single terracotta accent on warm paper | Postal/stamp language; memorable without shouting; keeps focus on the photos. |
 | 2026-07-24 | AI mockups skipped | OpenAI org verification required on the user's account; used a live HTML font/color preview instead (more faithful for a bilingual serif system). |
 | 2026-10-24 | Direction M (Memorial) = **three user-selectable themes** | Occasion Video memorials need a reverent register distinct from A. Rather than fix one look, the app offers three memorial themes (Slate dusk / Evergreen / Candlelight) and the person picks which the video uses — implemented as VIDEO_STYLES entries chosen per occasion. |
+| 2026-11-03 | Muted text darkened `#7A716A` → `#6E655D` | HFE audit (BL-37) measured the old muted grey below WCAG AA for small/secondary text (version 2.39:1, language switcher 2.64:1, 15px subtitle 4.24:1). Darkened the token to ~5:1 on paper and repointed the version + inactive-language uses off the faint `#A89C8D`; active language now uses ink so the selected language still stands out. Borders/decorative `#A89C8D` unchanged. |

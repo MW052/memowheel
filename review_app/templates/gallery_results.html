@@ -7,7 +7,7 @@
 <figure class="item sr-item gl-tile {{ 'gl-maybe' if h.tier == 'maybe' }}"
         data-score="{{ h.score }}" data-name="{{ nm | lower }}" data-path="{{ h.path }}"
         oncontextmenu="return tileMenu(event, this)">
-  <label class="gl-pick" onclick="event.stopPropagation()"><input type="checkbox" class="gl-check" value="{{ h.path }}" checked></label>
+  <label class="gl-pick" onclick="event.stopPropagation()"><input type="checkbox" class="gl-check" value="{{ h.path }}" onchange="glCount()"></label>
   <div class="card-media">
     <img src="{{ src }}" data-full="{{ src ~ '&full=1' }}" loading="lazy" alt=""
          onclick="openLightbox(this.dataset.full)">
@@ -46,19 +46,9 @@
   </header>
 
   <section class="pg-card pg-search">
-    <form action="/gallery/search" method="get" class="pg-search-form">
-      <input type="search" name="q" dir="auto" value="{{ q or '' }}" list="target-options"
-             placeholder="{{ t('gallery.search_ph') }}" required autofocus autocomplete="off">
-      <datalist id="target-options">
-        {% for tg in targets %}<option value="{{ tg.name }}"></option>{% endfor %}
-      </datalist>
-      <label class="gl-tier">{{ t('gallery.sensitivity') }}:
-        <select name="tier">
-          {% for tr in tiers %}<option value="{{ tr }}" {{ 'selected' if tr == tier }}>{{ t('gallery.tier_' ~ tr) }}</option>{% endfor %}
-        </select>
-      </label>
-      <button type="submit" class="btn btn-primary">{{ t('gallery.search_btn') }}</button>
-    </form>
+    {% set search_options = targets | map(attribute='name') | list %}
+    {% set ps_default_scope = 'library' %}
+    {% include "_personsearch.html" %}
   </section>
 
   {% if result %}
@@ -81,13 +71,14 @@
 
       {# export bar: destination chooser sits next to Copy / Move #}
       <form class="gl-export" onsubmit="return doExport(event)">
-        <label class="gl-selall"><input type="checkbox" id="gl-all" checked onchange="toggleAll(this)"> {{ t('gallery.select_all') }}</label>
+        <label class="gl-selall"><input type="checkbox" id="gl-all" onchange="toggleAll(this)"> {{ t('gallery.select_all') }}</label>
+        <span class="gl-count" id="gl-count">{{ t('gallery.n_selected', n=0) }}</span>
         <span id="gl-dest-show" class="pg-meta" dir="auto"></span>
         <span class="gl-export-actions">
           <input type="hidden" name="dest" id="gl-dest-val">
           <button type="button" class="btn btn-secondary" onclick="openFolderPicker(setDest)">{{ t('gallery.choose_dest') }}</button>
-          <button type="submit" name="mode" value="copy" class="btn btn-secondary">{{ t('gallery.copy_here') }}</button>
-          <button type="submit" name="mode" value="move" class="btn btn-ghost">{{ t('gallery.move_here') }}</button>
+          <button type="submit" name="mode" value="copy" class="btn btn-primary">{{ t('gallery.copy_here') }}</button>
+          <button type="submit" name="mode" value="move" class="btn btn-danger">{{ t('gallery.move_here') }}</button>
         </span>
       </form>
 
@@ -113,7 +104,16 @@
 const GL_TARGET = {{ (result.matched if result and result.matched else none) | tojson }};
 let GL_MENU_PATH = null, GL_MENU_TILE = null;
 
-function toggleAll(cb) { document.querySelectorAll(".gl-check").forEach((c) => { c.checked = cb.checked; }); }
+function toggleAll(cb) { document.querySelectorAll(".gl-check").forEach((c) => { c.checked = cb.checked; }); glCount(); }
+// Live "N selected" count; also keeps the Select-all box in sync with the tiles.
+function glCount() {
+  const boxes = document.querySelectorAll(".gl-check");
+  const n = document.querySelectorAll(".gl-check:checked").length;
+  const el = document.getElementById("gl-count");
+  if (el) el.textContent = window.tf("gallery.n_selected", { n });
+  const all = document.getElementById("gl-all");
+  if (all) all.checked = n > 0 && n === boxes.length;
+}
 function sortGrids() {
   const key = document.getElementById("gl-sort").value;
   document.querySelectorAll(".sr-grid").forEach((grid) => {
@@ -163,11 +163,14 @@ async function doExport(e) {
   const mode = (e.submitter && e.submitter.value) || "copy";
   const dest = e.target.dest.value.trim();
   if (!dest) { alert(window.t("gallery.need_dest")); return false; }
+  const picked = [...document.querySelectorAll(".gl-check:checked")].map((c) => c.value);
+  if (!picked.length) { alert(window.t("gallery.select_some")); return false; }
+  // Move takes files out of where they live — confirm before doing it in bulk.
+  if (mode === "move" && !confirm(window.tf("gallery.move_confirm", { n: picked.length }))) return false;
   const body = new URLSearchParams();
   body.append("dest", dest);
   body.append("mode", mode);
-  document.querySelectorAll(".gl-check:checked").forEach((c) => body.append("paths", c.value));
-  if (!body.getAll("paths").length) { alert(window.t("gallery.select_some")); return false; }
+  picked.forEach((p) => body.append("paths", p));
   const res = await fetch("/gallery/export", { method: "POST", body });
   if (!res.ok) { alert("Export failed"); return false; }
   const r = await res.json();
@@ -177,5 +180,6 @@ async function doExport(e) {
 }
 
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeLightbox(); hideMenu(); } });
+glCount();  // sync the count in case the browser restored checkbox state
 </script>
 {% endblock %}

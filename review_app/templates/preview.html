@@ -25,23 +25,33 @@
 
   <p class="pf-done-note" id="pf-done-note" hidden></p>
 
+  {% if latest %}
+  <p class="pf-freshness {{ 'is-stale' if render_state == 'stale' else 'is-fresh' }}" id="pf-freshness">
+    {{ t('preview.stale') if render_state == 'stale' else t('preview.fresh') }}
+  </p>
+  {% endif %}
+
   <fieldset class="pf-render" id="pf-render">
     <legend>{{ t('preview.render_label') }}</legend>
     <label class="pf-render-opt"><input type="radio" name="render" value="multi" {% if render_parallel %}checked{% endif %}><span>{{ t('preview.render_multi') }}</span></label>
     <label class="pf-render-opt"><input type="radio" name="render" value="single" {% if not render_parallel %}checked{% endif %}><span>{{ t('preview.render_single') }}</span></label>
     <p class="pf-render-hint">{{ t('preview.render_hint') }}</p>
+    <p class="pf-render-hint pf-render-scope">{{ t('preview.render_scope') }}</p>
   </fieldset>
 
+  {# Primary action is state-aware: when the film is up to date, the next step is
+     Finish (not an expensive rebuild); when stale or absent, building is primary. #}
   <div class="pf-actions">
     <button class="btn btn-secondary btn-lg gen-btn" id="draft-btn" onclick="rebuild('draft')" {% if included_count == 0 %}disabled{% endif %}>
       {{ t('preview.build_draft') }}
     </button>
-    <button class="btn btn-primary btn-lg gen-btn" id="rebuild-btn" onclick="rebuild('final')" {% if included_count == 0 %}disabled{% endif %}>
+    <button class="btn {{ 'btn-secondary' if render_state == 'fresh' else 'btn-primary' }} btn-lg gen-btn" id="rebuild-btn" onclick="rebuild('final')" {% if included_count == 0 %}disabled{% endif %}>
       {{ t('preview.rebuild') if latest else t('preview.build') }}
     </button>
+    {% if latest %}<a class="btn {{ 'btn-primary' if render_state == 'fresh' else 'btn-secondary' }} btn-lg" href="/finish">{{ t('preview.to_finish') }} &rarr;</a>{% endif %}
     <a class="btn btn-secondary" href="/review">&larr; {{ t('preview.back_story') }}</a>
-    {% if latest %}<a class="btn btn-secondary" href="/finish">{{ t('preview.to_finish') }} &rarr;</a>{% endif %}
   </div>
+  {% if included_count == 0 %}<p class="pf-build-reason">{{ t('preview.build_reason') }}</p>{% endif %}
   <p class="pf-modes-hint">{{ t('preview.modes_hint') }}</p>
 </div>
 {% endblock %}
@@ -69,6 +79,7 @@ async function rebuild(mode) {
   if (!res.ok) { const d = await res.json(); alert(d.detail); return; }
   const empty = document.getElementById('pf-empty'); if (empty) empty.hidden = true;
   const note = document.getElementById('pf-done-note'); if (note) note.hidden = true;
+  const fr = document.getElementById('pf-freshness'); if (fr) fr.hidden = true;  // state is changing
   document.querySelectorAll('.gen-btn').forEach(b => b.disabled = true);
   document.getElementById('pf-progress').hidden = false;
   poll();

@@ -340,7 +340,9 @@ def load_project(pid: str) -> bool:
     init_db(DEFAULT_DB_PATH)  # bring older project files (e.g. restored archives) up to date
     _restore_people(people)
     config.set_setting("current_project", pid)
-    _touch(pid)
+    # Opening a project to view it is not an edit, so don't bump "updated" (BL-19):
+    # the roster's "Updated <date>" should reflect the last real change, and the
+    # resume hero should point at where the user last *worked*, not last looked.
     return True
 
 

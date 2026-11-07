@@ -160,3 +160,41 @@ def search_media(item_id: int, project: str = ""):
     except Exception:
         raise HTTPException(status_code=404, detail="unreadable")
     return Response(content=buf.getvalue(), media_type="image/jpeg")
+
+
+@router.get("/people/{label}/face")
+def person_face(label: str, conn=Depends(get_db)):
+    """A small square JPEG of a person's face, cropped from their first readable
+    reference photo — the avatar shown on person rows, member chips, group lists
+    and the Occasion "Who it's for" picker (BL-32). 404 (handled gracefully by
+    the UI's initial fallback) if the person has no usable reference photo."""
+    row = conn.execute(
+        "SELECT reference_photo_path FROM enrolled_faces "
+        "WHERE person_label = ? ORDER BY id LIMIT 1", (label,)
+    ).fetchone()
+    if row is None or not row["reference_photo_path"]:
+        raise HTTPException(status_code=404, detail="no reference photo")
+    try:
+        import io as _io
+        from PIL import Image
+        from ingest.faces import reference_face_crop
+
+        rgb = None
+        for p in str(row["reference_photo_path"]).split(","):
+            p = p.strip()
+            if not p:
+                continue
+            rgb = reference_face_crop(p, out_size=160)
+            if rgb is not None:
+                break
+        if rgb is None:
+            raise HTTPException(status_code=404, detail="unreadable")
+        buf = _io.BytesIO()
+        Image.fromarray(rgb).save(buf, format="JPEG", quality=85)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=404, detail="unreadable")
+    # Reference photos rarely change; let the browser cache the avatar.
+    return Response(content=buf.getvalue(), media_type="image/jpeg",
+                    headers={"Cache-Control": "max-age=300"})

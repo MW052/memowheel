@@ -1,9 +1,10 @@
 {# Reusable click-through folder picker (same /setup/browse endpoint + .picker
    styles the setup wizard uses). Call window.openFolderPicker(cb) — cb(path) runs
    with the chosen absolute folder. Include once per page. #}
-<div id="fp-modal" class="picker" style="display:none">
+<div id="fp-modal" class="picker" style="display:none" onclick="if(event.target===this)fpClose()">
   <div class="picker-box">
     <div class="picker-path" id="fp-path"></div>
+    <div class="picker-hint">{{ t('setup.picker_hint') }}</div>
     <div class="picker-list" id="fp-list"></div>
     <div class="picker-actions">
       <button type="button" class="btn btn-secondary" onclick="fpClose()">{{ t('setup.cancel') }}</button>
@@ -25,10 +26,34 @@
     if (d.parent) { const up = row("⬑ " + window.t("setup.js.up")); up.onclick = () => load(d.parent); list.appendChild(up); }
     if (!atPC) { const pc = row("🖥 " + window.t("setup.js.this_pc")); pc.onclick = () => load(ROOT); list.appendChild(pc); }
     d.dirs.forEach((e) => { const r = row((atPC ? "💽 " : "📁 ") + e.name); r.onclick = () => load(e.path); list.appendChild(r); });
-    document.getElementById("fp-use").disabled = atPC;
+    const useBtn = document.getElementById("fp-use");
+    useBtn.disabled = atPC;
+    const leaf = (d.path || "").split(/[\\/]/).filter(Boolean).pop();
+    useBtn.textContent = (atPC || !leaf) ? window.t("setup.use_folder") : window.tf("setup.use_named", { name: leaf });
   }
-  window.openFolderPicker = function (cb, start) { fpCb = cb; document.getElementById("fp-modal").style.display = "flex"; load(start || ""); };
-  window.fpClose = function () { document.getElementById("fp-modal").style.display = "none"; };
+  let fpLastFocus = null;
+  const fpModal = () => document.getElementById("fp-modal");
+  function fpOpen() { return fpModal().style.display !== "none"; }
+  window.openFolderPicker = function (cb, start) {
+    fpCb = cb; fpLastFocus = document.activeElement;
+    fpModal().style.display = "flex"; load(start || "");
+    setTimeout(() => { const u = document.getElementById("fp-use"); if (u) u.focus(); }, 0);
+  };
+  window.fpClose = function () {
+    fpModal().style.display = "none";
+    if (fpLastFocus && fpLastFocus.focus) fpLastFocus.focus();
+  };
   window.fpUse = function () { if (fpPath && fpPath !== ROOT && fpCb) fpCb(fpPath); fpClose(); };
+  // Esc closes; Tab stays within the dialog.
+  document.addEventListener("keydown", (e) => {
+    if (!fpOpen()) return;
+    if (e.key === "Escape") { fpClose(); return; }
+    if (e.key !== "Tab") return;
+    const f = [...fpModal().querySelectorAll("button:not([disabled])")].filter((el) => el.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
 })();
 </script>

@@ -1,5 +1,14 @@
 # Memowheel
 
+**Turn your photos into a keepsake video — start to finish on your own machine, no accounts, nothing uploaded.**
+
+### [⬇ Download for Windows](https://github.com/MW052/memowheel/releases/latest)
+
+**Website:** [English](https://mw052.github.io/memowheel/) · [עברית](https://mw052.github.io/memowheel/index-he.html)  
+**Install guide:** [English](https://mw052.github.io/memowheel/install.html) · [עברית](https://mw052.github.io/memowheel/install-he.html)
+
+![Memowheel — the review workspace](docs/app-screenshot.webp)
+
 A locally-run app that turns your photos into a keepsake video. It runs
 entirely on your own machine — no accounts, nothing uploaded except the few
 photos you approve for AI place-identification.
@@ -12,10 +21,6 @@ Memowheel is a small **hub** of "makers", two of them live:
 - **Occasion Video** — pick a person for a birthday, anniversary, or memorial;
   on-device face recognition gathers their photos from across your library,
   arranges them by year, and you confirm the matches before rendering.
-
-See `git log --oneline` for the authoritative change log. All visual decisions
-(app **and** video) are governed by `DESIGN.md` — read it before any
-UI/aesthetic change.
 
 ## System requirements
 
@@ -97,6 +102,10 @@ See `packaging\README.md` for details and clean-machine caveats.
 
 > **No hot reload.** After editing any `.py` file, restart the server — templates
 > and CSS reload on their own, Python does not.
+
+For contributors: see `git log --oneline` for the authoritative change log, and
+`DESIGN.md` for the visual system (app **and** video) — read it before any
+UI/aesthetic change.
 
 ## Using the app (GUI)
 

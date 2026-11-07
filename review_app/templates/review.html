@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ t('review.title') }}{% endblock %}
+{% block title %}{{ (t('feature.occasion.name') if project_kind == 'occasion' else t('feature.trip.name')) }} — {{ t('review.tab') }}{% endblock %}
 
 {% macro tile(m) %}
 <div class="moment-tile" data-cluster-id="{{ m.id }}" role="button" tabindex="0"
@@ -18,7 +18,7 @@
       <span class="spacer"></span>
       <button class="kebab" onclick="momentMenu(event, '{{ m.id }}')" title="{{ t('review.more') }}">&#8942;</button>
     </div>
-    <div class="mt-meta">{{ t('review.items_n', n=m.count) }} &middot; {{ m.duration }} &middot; <span class="mt-id">#{{ m.id }}</span></div>
+    <div class="mt-meta">{{ t('review.items_n', n=m.count) }} &middot; {{ m.duration }}</div>
     {% if m.included == 0 %}<div class="mt-notincluded">{{ t('review.not_included') }}</div>{% endif %}
   </div>
 </div>
@@ -46,15 +46,18 @@
 
   <details class="trip-settings">
     <summary>{{ t('review.occasion_settings') if occ else t('review.trip_settings') }}</summary>
-    <form id="intro-form" class="ts-form">
+    {# Opening/closing slides autosave on blur (and a beat after typing stops),
+       like the rest of the workspace — no manual Save button, so edits can't be
+       lost by navigating away (BL-27). #}
+    <form id="intro-form" class="ts-form" onsubmit="return false">
       <label for="intro-text">{{ t('review.opening') }}</label>
-      <textarea id="intro-text" name="intro_text" dir="auto" rows="2">{{ intro_text }}</textarea>
-      <button type="submit" class="btn btn-secondary">{{ t('review.save_opening') }}</button>
+      <textarea id="intro-text" name="intro_text" dir="auto" rows="3">{{ intro_text }}</textarea>
+      <span class="ts-autosave">{{ t('review.autosaves') }}</span>
     </form>
-    <form id="outro-form" class="ts-form">
+    <form id="outro-form" class="ts-form" onsubmit="return false">
       <label for="outro-text">{{ t('review.closing') }}</label>
-      <textarea id="outro-text" name="outro_text" dir="auto" rows="2">{{ outro_text }}</textarea>
-      <button type="submit" class="btn btn-secondary">{{ t('review.save_closing') }}</button>
+      <textarea id="outro-text" name="outro_text" dir="auto" rows="3">{{ outro_text }}</textarea>
+      <span class="ts-autosave">{{ t('review.autosaves') }}</span>
     </form>
     {% if not occ %}
     <form id="recluster-form" class="ts-form">
@@ -79,6 +82,11 @@
     {% elif view == 'unassigned' %}
     <h2 class="ws-h2">{{ t('review.unassigned') }}</h2>
     <p class="hint">{{ t('review.unassigned_hint') }}</p>
+    {% if orphan_items %}
+    <div class="orphan-tools">
+      <button type="button" class="btn btn-secondary" onclick="selectAllOrphans()">{{ t('review.select_all') }}</button>
+    </div>
+    {% endif %}
     <div class="cluster" id="orphan-cluster">
       <div class="grid" data-cluster="">
         {% for item in orphan_items %}
@@ -87,6 +95,9 @@
             <span class="dh-grip" aria-hidden="true">&#10287;</span>
             <span class="dh-label">{{ t('review.drag_hint') }}</span>
           </div>
+          <label class="card-select" title="{{ t('review.select') }}" onclick="event.stopPropagation()">
+            <input type="checkbox" onchange="toggleSelect(event, {{ item.id }})">
+          </label>
           {% if item.item_type == 'photo' %}<img src="/media/{{ item.id }}" loading="lazy">{% else %}<video src="/media/{{ item.id }}" muted></video>{% endif %}
           <div class="tags">{{ item.face_tags | join(', ') if item.face_tags else t('review.no_face') }}</div>
           <select class="assign-select" onchange="assignToCluster({{ item.id }}, this.value)">
@@ -179,7 +190,9 @@
 </div>
 
 <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+  <button class="lb-nav lb-prev" id="lb-prev" hidden onclick="event.stopPropagation();lbStep(-1)" title="{{ t('review.lb_prev') }}" aria-label="{{ t('review.lb_prev') }}">&#8249;</button>
   <div class="lightbox-inner" id="lightbox-inner" onclick="event.stopPropagation()"></div>
+  <button class="lb-nav lb-next" id="lb-next" hidden onclick="event.stopPropagation();lbStep(1)" title="{{ t('review.lb_next') }}" aria-label="{{ t('review.lb_next') }}">&#8250;</button>
   <button class="lightbox-close" onclick="closeLightbox()" title="{{ t('review.close_esc') }}">&times;</button>
 </div>
 <div id="lb-zoom" class="lb-zoom" onclick="closeZoom()" title="{{ t('review.close_esc') }}"><img id="lb-zoom-img" alt=""></div>
@@ -514,8 +527,35 @@ async function toggleItem(itemId) {
 
 // ---------- lightbox ----------
 let lbTrim = { id: null, start: 0, end: 0 };
+// Prev/next within a moment's photos (BL-20): on opening a photo, gather the
+// photo tiles in the same grid so ‹/› and the arrow keys flip through them
+// without closing the lightbox.
+let lbPhotos = [], lbIndex = -1;
+function lbCollect(itemId) {
+  const tile = document.querySelector(`.item[data-item-id="${itemId}"]`);
+  const grid = tile && tile.closest(".grid");
+  lbPhotos = grid ? [...grid.querySelectorAll(".item")].filter(el => el.querySelector("img")).map(el => el.dataset.itemId) : [];
+  lbIndex = lbPhotos.indexOf(String(itemId));
+  const many = lbPhotos.length > 1;
+  const prev = document.getElementById("lb-prev"), next = document.getElementById("lb-next");
+  if (prev) prev.hidden = !many;
+  if (next) next.hidden = !many;
+}
+function lbHideNav() {
+  lbPhotos = []; lbIndex = -1;
+  const prev = document.getElementById("lb-prev"), next = document.getElementById("lb-next");
+  if (prev) prev.hidden = true;
+  if (next) next.hidden = true;
+}
+function lbStep(dir) {
+  if (lbIndex < 0 || lbPhotos.length < 2) return;
+  const n = (lbIndex + dir + lbPhotos.length) % lbPhotos.length;
+  const img = document.querySelector(`.item[data-item-id="${lbPhotos[n]}"] img`);
+  if (img) img.onclick();  // re-opens the lightbox with that photo's own rotation/crop
+}
 function openLightbox(itemId, type, opts) {
   opts = opts || {};
+  if (type === "photo") lbCollect(itemId); else lbHideNav();
   const inner = document.getElementById("lightbox-inner");
   if (type === "photo") {
     const bust = "?v=" + (opts.rotation || 0) + "_" + ((opts.crop || "").replace(/[,.]/g, "")) + "_" + Date.now();
@@ -548,6 +588,7 @@ function setTrim(which) {
 }
 async function saveTrim() { await fetch(`/items/${lbTrim.id}/trim`, { method: "POST", body: new URLSearchParams({ start: lbTrim.start, end: lbTrim.end }) }); closeLightbox(); }
 function startCrop(itemId, existing) {
+  lbHideNav();  // cropping takes over the lightbox; no photo-stepping during it
   const inner = document.getElementById("lightbox-inner");
   inner.innerHTML = `<div class="crop-stage" id="crop-stage"><img id="crop-img" src="/media/${itemId}?full=1&t=${Date.now()}">` +
     `<div class="crop-box" id="crop-box"><span class="crop-h tl"></span><span class="crop-h tr"></span><span class="crop-h bl"></span><span class="crop-h br"></span></div></div>` +
@@ -598,7 +639,15 @@ async function clearCrop(itemId) {
   await fetch(`/items/${itemId}/crop`, { method: "POST", body: new URLSearchParams({ crop: "" }) });
   const cid = clusterIdOf(itemId); closeLightbox(); await refreshCluster(cid);
 }
-function closeLightbox() { document.getElementById("lightbox").style.display = "none"; document.getElementById("lightbox-inner").innerHTML = ""; }
+function closeLightbox() { document.getElementById("lightbox").style.display = "none"; document.getElementById("lightbox-inner").innerHTML = ""; lbHideNav(); }
+// Arrow keys flip through a moment's photos while the lightbox is open (and not
+// mid-crop, where the inner view is the crop stage).
+document.addEventListener("keydown", (e) => {
+  if (document.getElementById("lightbox").style.display !== "flex") return;
+  if (document.getElementById("crop-stage")) return;
+  if (e.key === "ArrowRight") { e.preventDefault(); lbStep(1); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); lbStep(-1); }
+});
 // Full-screen enlarge: the photo fills the viewport (no editing chrome); click
 // anywhere or Esc to dismiss back to the lightbox.
 function openZoom(itemId) {
@@ -614,7 +663,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   const z = document.getElementById("lb-zoom");
   if (z && z.style.display === "flex") { closeZoom(); return; }  // Esc exits enlarge first
-  closeLightbox(); closeFaces();
+  // Every overlay dismisses on Esc, consistently with overlay-click (BL-17).
+  closeLightbox(); closeFaces(); closeMediaPicker(); closeGen();
 });
 
 // ---------- cover / assign / faces / place / find ----------
@@ -689,8 +739,24 @@ function editDayTitle(td) {
 }
 
 // ---------- trip settings (opening / closing / regroup) ----------
-document.getElementById("intro-form").addEventListener("submit", async (e) => { e.preventDefault(); await fetch("/intro", { method: "POST", body: new URLSearchParams(new FormData(e.target)) }); flashSaved(e.target); });
-document.getElementById("outro-form").addEventListener("submit", async (e) => { e.preventDefault(); await fetch("/outro", { method: "POST", body: new URLSearchParams(new FormData(e.target)) }); flashSaved(e.target); });
+// Opening/closing slides autosave (BL-27): save on blur, and a short beat after
+// typing stops, so edits persist without a Save click. Skips redundant saves.
+function autosaveSlide(formId, url){
+  const form = document.getElementById(formId);
+  if(!form) return;
+  const ta = form.querySelector("textarea");
+  let saved = ta.value, timer = null;
+  async function save(){
+    if(ta.value === saved) return;
+    saved = ta.value;
+    await fetch(url, { method: "POST", body: new URLSearchParams(new FormData(form)) });
+    flashSaved(form);
+  }
+  ta.addEventListener("blur", () => { clearTimeout(timer); save(); });
+  ta.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(save, 1200); });
+}
+autosaveSlide("intro-form", "/intro");
+autosaveSlide("outro-form", "/outro");
 document.getElementById("recluster-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   await fetch("/recluster", { method: "POST", body: new URLSearchParams(new FormData(e.target)) });
@@ -779,7 +845,26 @@ async function runBulk(url, extra) {
   const d = await res.json(); clearSelection(); await refreshAffected(d.affected); toast(tf("review.js.bulk_done", { n }));
 }
 function bulkInclude(value) { return runBulk("/items/bulk/include", { value }); }
-function bulkMove(sel) { const cid = sel.value; sel.value = ""; return cid ? runBulk("/items/bulk/move", { cluster_id: cid }) : null; }
+function bulkMove(sel) {
+  const cid = sel.value; sel.value = "";
+  if (!cid) return null;
+  const movedIds = [...selected];  // runBulk clears the set, so capture first
+  return runBulk("/items/bulk/move", { cluster_id: cid }).then(() => {
+    const orphan = document.getElementById("orphan-cluster");
+    if (!orphan) return;  // moved items leave the Unassigned bucket
+    movedIds.forEach((id) => { const c = orphan.querySelector(`.item[data-item-id="${id}"]`); if (c) c.remove(); });
+    if (orphan.querySelectorAll(".item").length === 0) orphan.style.display = "none";
+  });
+}
+// Unassigned bucket: select the whole bucket at once, then act via the bulk bar.
+function selectAllOrphans() {
+  document.querySelectorAll("#orphan-cluster .item[data-item-id]").forEach((card) => {
+    selected.add(String(card.dataset.itemId));
+    card.classList.add("selected");
+    const cb = card.querySelector(".card-select input"); if (cb) cb.checked = true;
+  });
+  updateBulkBar();
+}
 function bulkFaces(sel) { const label = sel.value; sel.value = ""; return label ? runBulk("/items/bulk/faces", { label, action: "add" }) : null; }
 function bulkPlace() { const i = document.getElementById("bulk-place-input"); const v = i.value; i.value = ""; return runBulk("/items/bulk/place", { place_name: v }); }
 (function initBulkBar() {

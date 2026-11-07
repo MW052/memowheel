@@ -129,6 +129,20 @@ def gallery_search(request: Request, q: str = "", tier: str = "balanced", conn=D
             hits, kind, matched = face_index.find_group(group, tier), "group", group
         else:
             hits, kind, matched = [], None, None
+        # De-duplicate by file (BL-34): the same photo indexed under two library
+        # paths (a copy in two folders) otherwise shows as two identical tiles.
+        # Collapse hits that share a basename AND score — same name + same match
+        # score is the same content; distinct same-named photos score differently
+        # and survive. Hits are best-first, so the first kept is the best.
+        import os
+        seen, deduped = set(), []
+        for h in hits:
+            key = (os.path.basename(h["path"]), h["score"])
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(h)
+        hits = deduped
         # Keep photos and clips apart (hits arrive already ranked best-match
         # first), and within each keep strong vs maybe apart too.
         def split(kind_):

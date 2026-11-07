@@ -4,6 +4,8 @@ gets `t`, `lang`, `lang_dir`, `LANGS`, `i18n_json` (i18n) plus `app_name` and
 routes import `templates` from here.
 """
 
+import re
+
 from fastapi.templating import Jinja2Templates
 
 import config
@@ -39,8 +41,48 @@ def asset_ver(filename: str) -> int:
         return 0
 
 
+_TRACK_NUM_RE = re.compile(r"^\s*\d{1,3}\s*[._)\-]+\s*")
+
+
+def humanize_track(name: str) -> str:
+    """Turn a raw music filename into a readable label for display only.
+
+    Strips the extension and a leading track-number prefix ("01 ", "01_",
+    "03 - ", …), turns _/- separators into spaces, collapses whitespace and
+    gently Title-Cases the result. The real filename is still what every
+    action posts (templates keep it in data-name), so humanizing is cosmetic
+    and reversible. Hebrew and other non-Latin text pass through unchanged.
+    Falls back to the original stem if cleaning would empty the label.
+    """
+    if not name:
+        return ""
+    stem = name.rsplit(".", 1)[0] if "." in name else name
+    cleaned = _TRACK_NUM_RE.sub("", stem)
+    cleaned = re.sub(r"[_\-]+", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if not cleaned:
+        return stem.strip() or name
+    # Title-case only all-lowercase ASCII words so acronyms ("DJ") and
+    # already-cased or Hebrew words are left as the user named them.
+    def _cap(word: str) -> str:
+        return word[:1].upper() + word[1:] if word.isascii() and word.islower() else word
+    return " ".join(_cap(w) for w in cleaned.split(" "))
+
+
+def safe_filename(name: str, default: str = "video") -> str:
+    """A download-friendly base filename from a project name (BL-25): keep
+    letters/numbers/spaces/dashes (any script, so Hebrew names survive), drop
+    characters a filesystem dislikes, collapse whitespace. No extension here —
+    the caller appends it. Falls back to `default` if nothing usable remains."""
+    cleaned = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', " ", name or "")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" .")
+    return cleaned or default
+
+
 templates = Jinja2Templates(
     directory=str(resource_path("review_app/templates")),
     context_processors=[i18n_context, app_context],
 )
 templates.env.globals["asset_ver"] = asset_ver
+templates.env.filters["humanize_track"] = humanize_track
+templates.env.filters["safe_filename"] = safe_filename

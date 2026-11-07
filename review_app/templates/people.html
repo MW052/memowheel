@@ -8,22 +8,11 @@
     <p class="pg-sub">{{ t('people.subtitle') }}</p>
   </header>
 
-  {# ---- search ---- #}
+  {# ---- search (shared component, both axes) ---- #}
   <section class="pg-card pg-search">
     <h2>{{ t('people.search_heading') }}</h2>
-    <form action="/people/search" method="get" class="pg-search-form">
-      <input type="search" name="q" dir="auto" value="{{ q or '' }}" list="name-options"
-             placeholder="{{ t('people.search_ph') }}" required autofocus autocomplete="off">
-      <datalist id="name-options">
-        {% for name in name_options %}<option value="{{ name }}"></option>{% endfor %}
-      </datalist>
-      <fieldset class="pg-scope">
-        <span class="pg-scope-label">{{ t('people.scope_label') }}:</span>
-        <label><input type="radio" name="scope" value="current" checked> {{ t('people.scope_current') }}</label>
-        <label><input type="radio" name="scope" value="all"> {{ t('people.scope_all') }}</label>
-      </fieldset>
-      <button type="submit" class="btn btn-primary">{{ t('people.search_btn') }}</button>
-    </form>
+    {% set search_options = name_options %}
+    {% include "_personsearch.html" %}
   </section>
 
   {% if not people %}
@@ -93,7 +82,7 @@
         <div class="pg-chips">
           {% if g.members %}
             {% for m in g.members %}
-            <span class="pg-chip" dir="auto">{{ m }}<button class="pg-chip-x" title="{{ t('people.remove') }}"
+            <span class="pg-chip" dir="auto"><span class="pg-avatar pg-avatar-sm"><span class="pg-avatar-i">{{ m[:1] | upper }}</span><img src="/people/{{ m | urlencode }}/face" alt="" loading="lazy" onerror="this.remove()"></span>{{ m }}<button class="pg-chip-x" title="{{ t('people.remove') }}"
                   onclick="removeMember({{ g.id }}, {{ m | tojson }})">×</button></span>
             {% endfor %}
           {% else %}
@@ -124,6 +113,10 @@
         {% for p in people %}
         <li class="pg-person">
           <div class="pg-person-main">
+            {# Reference-face avatar (BL-32): identity is verifiable at a glance on
+               a face-recognition product. Falls back to the initial when there's
+               no readable reference photo, via the img's onerror. #}
+            <span class="pg-avatar"><span class="pg-avatar-i">{{ p.label[:1] | upper }}</span><img src="/people/{{ p.label | urlencode }}/face" alt="" loading="lazy" onerror="this.remove()"></span>
             <span class="pg-name" dir="auto">{{ p.label }}</span>
             <span class="pg-meta">{{ t('people.photos_n', n=p.photo_count) }}</span>
           </div>

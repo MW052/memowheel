@@ -59,9 +59,13 @@ def _targets(conn) -> list[dict]:
 def occasion_home(request: Request, conn=Depends(get_db)):
     projects = [p for p in project_store.list_projects()
                 if project_store.project_kind(p["id"]) == "occasion"]
+    # Resume hero: the most recent in-progress occasion (no rendered video yet),
+    # mirroring the Trip chooser so both landings share the same structure.
+    last_unfinished = next((p for p in projects if not p.get("video")), None)
     return templates.TemplateResponse(request, "occasion_home.html", {
         "projects": projects,
         "current": project_store.current(),
+        "last_unfinished": last_unfinished,
         "people_count": len(people.list_people(conn)),
         "index": face_index.index_status(),
     })

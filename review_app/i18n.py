@@ -29,6 +29,7 @@ _EN = {
     "nav.setup": "Setup",
     "nav.review": "Review",
     "nav.story": "Story",
+    "nav.jump_step": "Jump to a step",
     "nav.preview": "Preview",
     "nav.finish": "Finish",
     "nav.save": "Saved",
@@ -45,15 +46,15 @@ _EN = {
     "people_home.groups_desc": "Enroll people, organize them into groups, and tidy up old photo tags.",
     "people_home.library_desc": "Index your photo folders and find everyone's photos and clips.",
     "people_home.people_n": "{n} enrolled",
-    "people_home.groups_n": "{n} groups",
-    "people_home.indexed_n": "{n} photos indexed",
+    "people_home.groups_n": "{n} group|{n} groups",
+    "people_home.indexed_n": "{n} photo indexed|{n} photos indexed",
     # people & groups page
     "people.title": "People & Groups",
-    "people.subtitle": "Organize the people you've enrolled into groups, then find their photos across your trips.",
+    "people.subtitle": "Organize the people you've enrolled into groups, then find their photos across your projects.",
     "people.people_heading": "People",
     "people.none_enrolled": "No one is enrolled yet. Add people in Setup.",
     "people.go_setup": "Go to Setup",
-    "people.photos_n": "{n} reference photos",
+    "people.photos_n": "{n} reference photo|{n} reference photos",
     "people.not_in_group": "Not in any group",
     "people.add_to_group": "Add to group…",
     "people.add_person": "Add a person…",
@@ -107,6 +108,8 @@ _EN = {
     "gallery.maybe_note": "dimmed = lower confidence",
     "gallery.remove_from": "This isn't {name} — remove",
     "gallery.select_all": "Select all",
+    "gallery.n_selected": "{n} selected",
+    "gallery.move_confirm": "Move {n} file out of its folder? This takes it out of where it lives now.|Move {n} files out of their folders? This takes them out of where they live now.",
     "gallery.dest_ph": "Destination folder (full path)",
     "gallery.copy_here": "Copy selected here",
     "gallery.move_here": "Move selected here",
@@ -130,8 +133,10 @@ _EN = {
     "people.search_ph": "Search by a person or group name",
     "people.search_btn": "Search",
     "people.scope_label": "Search in",
-    "people.scope_current": "This trip",
-    "people.scope_all": "All trips",
+    "people.scope_current": "This project",
+    "people.scope_all": "All projects",
+    "people.scope_library": "Whole library",
+    "people.sensitivity_lib_only": "Sensitivity applies to the whole-library search.",
     "people.results_for": "Results for “{q}”",
     "people.matched_people": "People",
     "people.matched_groups": "Groups",
@@ -181,7 +186,7 @@ _EN = {
     # setup — step 1 people
     "setup.step1": "1 · Who's in the videos?",
     "setup.step1_hint": "Add each person and upload a few clear photos of just them. Their name is how they'll be tagged.",
-    "setup.ref_photos": "{n} reference photo(s)",
+    "setup.ref_photos": "{n} reference photo|{n} reference photos",
     "setup.remove": "Remove",
     "setup.rename": "Rename",
     "setup.person_ph": "Person's name (e.g. Alice)",
@@ -243,6 +248,7 @@ _EN = {
     "setup.music_hint": "Background music plays under the video (tracks in order, looping if the video runs longer). Add your own .mp3 files, or grab free ones from the sites below.",
     "setup.move_up": "Move up",
     "setup.move_down": "Move down",
+    "setup.music.reorder": "Drag to reorder (or use the arrow keys)",
     "setup.no_music": "No music yet — the video will have no soundtrack until you add a track.",
     "setup.add_music": "Add music",
     "setup.choose_file": "Choose file",
@@ -272,6 +278,8 @@ _EN = {
     "setup.new_trip": "Start a new trip",
     "setup.cancel": "Cancel",
     "setup.use_folder": "Use this folder",
+    "setup.use_named": "Use “{name}”",
+    "setup.picker_hint": "You'll use the folder shown above. Click a folder below to open it.",
     # setup — JS
     "setup.js.looking_faces": "Looking for faces…",
     "setup.js.added": "Added {person} — face found in {found} of {total} photo(s).",
@@ -318,7 +326,7 @@ _EN = {
 
     # setup — guided wizard
     "setup.wiz.step_photos": "Choose Photos",
-    "setup.wiz.step_people": "People",
+    "setup.wiz.step_people": "People in this trip",
     "setup.wiz.step_mood": "Film Mood",
     "setup.wiz.step_music": "Music",
     "setup.wiz.step_import": "Import & Organize",
@@ -369,6 +377,8 @@ _EN = {
     "setup.wiz.too_many": "That's a lot at once — drop it in smaller batches, or use “Choose trip folder” instead.",
     "setup.js.no_media": "No photos or clips in that selection.",
     "setup.wiz.looks_right": "Looks right — continue",
+    "setup.wiz.step_of": "Step {n} of {total}",
+    "setup.wiz.pick_to_continue": "Choose a folder or add files to continue.",
     "setup.wiz.trouble": "Having trouble finding all your photos?",
     "setup.wiz.group_label": "Group photos taken within (minutes)",
     "setup.wiz.exclude_label": "Skip these subfolders",
@@ -413,6 +423,9 @@ _EN = {
 
     # review
     "review.title": "Trip Video — Review",
+    "review.tab": "Review",
+    "review.lb_prev": "Previous photo",
+    "review.lb_next": "Next photo",
     "review.kicker": "Review & curate",
     "review.in_film": "item(s) in your film",
     "review.skipped": "{n} file(s) skipped during import",
@@ -423,6 +436,7 @@ _EN = {
     "review.regroup": "Re-group",
     "review.regroup_note": "Regroups photos into stops by time. Only affects stops that don't have a place yet.",
     "review.opening": "Opening slide",
+    "review.autosaves": "Saves automatically",
     "review.opening_sub": "— the first thing viewers see",
     "review.save_opening": "Save opening",
     "review.unassigned": "Unassigned photos & clips",
@@ -534,6 +548,13 @@ _EN = {
     "finish.none": "No film yet.",
     "finish.go_preview": "Build a preview →",
     "finish.saved_to": "Saved in {dir} · nothing leaves your computer",
+    "finish.not_built": "Your film isn't built yet",
+    "finish.stale_badge": "Out of date",
+    "finish.stale_note": "You've changed your Story since this film was made — rebuild to apply the changes.",
+    "preview.fresh": "Up to date with your Story.",
+    "preview.stale": "Your Story changed — rebuild to apply the changes.",
+    "preview.build_reason": "Add photos in Story first.",
+    "preview.render_scope": "Applies to the final film — the quick draft is always fast.",
     # projects (multi-project library + chooser)
     "projects.title": "Your trip films",
     "projects.sub": "Pick up where you left off, open a finished film, or start a new one.",
@@ -547,7 +568,8 @@ _EN = {
     "projects.new": "Start a new project",
     "projects.new_ph": "Name this trip (e.g. Portugal 2023)",
     "projects.new_start": "Create",
-    "projects.switch": "Projects…",
+    "projects.switch": "Trip projects",
+    "projects.all": "All projects",
     "projects.rename": "Rename",
     "projects.delete": "Delete project",
     "projects.rename_prompt": "New name for this project:",
@@ -557,6 +579,7 @@ _EN = {
     "projects.restore": "Open",
     "review.select": "Select",
     "review.selected": "selected",
+    "review.select_all": "Select all",
     "review.bulk_move": "Move to…",
     "review.bulk_add_person": "Add person…",
     "review.bulk_place_ph": "Set place…",
@@ -609,7 +632,7 @@ _EN = {
     "occasion.home_sub": "A video from photos of someone — gathered from your library — for a birthday, anniversary, or memorial.",
     "occasion.your": "Your occasions",
     "occasion.none": "No occasions yet.",
-    "occasion.new": "New occasion",
+    "occasion.new": "Start a new occasion",
     "occasion.new_title": "New occasion",
     "occasion.new_sub": "Pick who it's for, and we'll gather their photos from your library.",
     "occasion.need_people": "Enroll the person first so their photos can be found.",
@@ -643,6 +666,9 @@ _EN = {
     "occasion.step_words": "Title & messages",
     "occasion.step_words_sub": "The opening and closing words. You can edit these later.",
     "occasion.need_honoree": "Choose who it's for first.",
+    "occasion.honoree_help": "Pick one of your enrolled people or groups — their face is what the gather collects.",
+    "occasion.honoree_nomatch": "No enrolled person or group by that name yet.",
+    "occasion.honoree_enroll": "Enroll a new person →",
     "occasion.sample.birthday": "Happy birthday",
     "occasion.sample.anniversary": "Happy anniversary",
     "occasion.sample.memorial": "In loving memory",
@@ -657,6 +683,7 @@ _EN = {
     "occasion.style.mem_candle": "Candlelight",
     "occasion.cover_intro": "Opening cover photo (optional)",
     "occasion.cover_outro": "Closing cover photo (optional)",
+    "occasion.choose_cover": "Choose photo",
     "occasion.cover_hint": "A photo to fill the opening/closing card behind the words. Leave empty for the plain card.",
     "occasion.step_media": "Add media",
     "occasion.step_media_sub": "Got photos from family and friends? Add their folders — we'll search these too when gathering the honoree's photos.",
@@ -698,6 +725,7 @@ _HE = {
     "nav.setup": "הגדרה",
     "nav.review": "סקירה",
     "nav.story": "הסיפור",
+    "nav.jump_step": "מעבר לשלב",
     "nav.preview": "תצוגה מקדימה",
     "nav.finish": "סיום",
     "nav.save": "נשמר",
@@ -712,15 +740,15 @@ _HE = {
     "people_home.groups_desc": "רשמו אנשים, ארגנו אותם לקבוצות, וסדרו תגיות ישנות בתמונות.",
     "people_home.library_desc": "אנדקסו את תיקיות התמונות שלכם ומצאו את התמונות והקליפים של כולם.",
     "people_home.people_n": "{n} רשומים",
-    "people_home.groups_n": "{n} קבוצות",
-    "people_home.indexed_n": "{n} תמונות באינדקס",
+    "people_home.groups_n": "{n} קבוצה|{n} קבוצות",
+    "people_home.indexed_n": "{n} תמונה באינדקס|{n} תמונות באינדקס",
     # people & groups page
     "people.title": "אנשים וקבוצות",
-    "people.subtitle": "ארגנו את האנשים שרשמתם לקבוצות, ואז מצאו את התמונות שלהם בכל הטיולים.",
+    "people.subtitle": "ארגנו את האנשים שרשמתם לקבוצות, ואז מצאו את התמונות שלהם בכל הפרויקטים.",
     "people.people_heading": "אנשים",
     "people.none_enrolled": "עדיין לא נרשם אף אחד. הוסיפו אנשים בהגדרה.",
     "people.go_setup": "מעבר להגדרה",
-    "people.photos_n": "{n} תמונות ייחוס",
+    "people.photos_n": "תמונת ייחוס אחת|{n} תמונות ייחוס",
     "people.not_in_group": "לא בשום קבוצה",
     "people.add_to_group": "הוספה לקבוצה…",
     "people.add_person": "הוספת אדם…",
@@ -774,6 +802,8 @@ _HE = {
     "gallery.maybe_note": "מעומעם = ביטחון נמוך יותר",
     "gallery.remove_from": "זה לא {name} — הסרה",
     "gallery.select_all": "בחירת הכול",
+    "gallery.n_selected": "{n} נבחרו",
+    "gallery.move_confirm": "להעביר {n} קובץ מהתיקייה שלו? הפעולה מוציאה אותו מהמקום שבו הוא נמצא כעת.|להעביר {n} קבצים מהתיקיות שלהם? הפעולה מוציאה אותם מהמקום שבו הם נמצאים כעת.",
     "gallery.dest_ph": "תיקיית יעד (נתיב מלא)",
     "gallery.copy_here": "העתקת הנבחרות לכאן",
     "gallery.move_here": "העברת הנבחרות לכאן",
@@ -797,8 +827,10 @@ _HE = {
     "people.search_ph": "חיפוש לפי שם אדם או קבוצה",
     "people.search_btn": "חיפוש",
     "people.scope_label": "חיפוש ב",
-    "people.scope_current": "הטיול הזה",
-    "people.scope_all": "כל הטיולים",
+    "people.scope_current": "הפרויקט הזה",
+    "people.scope_all": "כל הפרויקטים",
+    "people.scope_library": "כל הספרייה",
+    "people.sensitivity_lib_only": "הרגישות חלה על חיפוש בכל הספרייה.",
     "people.results_for": "תוצאות עבור ”{q}“",
     "people.matched_people": "אנשים",
     "people.matched_groups": "קבוצות",
@@ -850,7 +882,7 @@ _HE = {
     # setup — step 1 people
     "setup.step1": "1 · מי מופיע בסרטונים?",
     "setup.step1_hint": "הוסיפו כל אדם והעלו כמה תמונות ברורות שלו בלבד. השם שלו הוא התיוג שיופיע.",
-    "setup.ref_photos": "{n} תמונות ייחוס",
+    "setup.ref_photos": "תמונת ייחוס אחת|{n} תמונות ייחוס",
     "setup.remove": "הסרה",
     "setup.rename": "שינוי שם",
     "setup.person_ph": "שם האדם (למשל דנה)",
@@ -912,6 +944,7 @@ _HE = {
     "setup.music_hint": "מוזיקת רקע מתנגנת מתחת לווידאו (רצועות לפי הסדר, בלולאה אם הווידאו ארוך יותר). הוסיפו קובצי ‎.mp3 משלכם, או קחו כאלה חינמיים מהאתרים למטה.",
     "setup.move_up": "העברה למעלה",
     "setup.move_down": "העברה למטה",
+    "setup.music.reorder": "גררו כדי לשנות סדר (או בעזרת מקשי החִצים)",
     "setup.no_music": "עדיין אין מוזיקה — לווידאו לא יהיה פסקול עד שתוסיפו רצועה.",
     "setup.add_music": "הוספת מוזיקה",
     "setup.choose_file": "בחר קובץ",
@@ -941,6 +974,8 @@ _HE = {
     "setup.new_trip": "התחלת טיול חדש",
     "setup.cancel": "ביטול",
     "setup.use_folder": "השתמשו בתיקייה זו",
+    "setup.use_named": "שימוש ב„{name}”",
+    "setup.picker_hint": "תשתמשו בתיקייה המוצגת למעלה. לחצו על תיקייה למטה כדי להיכנס אליה.",
     # setup — JS
     "setup.js.looking_faces": "מחפש פנים…",
     "setup.js.added": "נוסף {person} — נמצאו פנים ב-{found} מתוך {total} תמונות.",
@@ -987,7 +1022,7 @@ _HE = {
 
     # setup — guided wizard
     "setup.wiz.step_photos": "בחירת תמונות",
-    "setup.wiz.step_people": "אנשים",
+    "setup.wiz.step_people": "אנשים בטיול הזה",
     "setup.wiz.step_mood": "אופי הסרט",
     "setup.wiz.step_music": "מוזיקה",
     "setup.wiz.step_import": "ייבוא וסידור",
@@ -1038,6 +1073,8 @@ _HE = {
     "setup.wiz.too_many": "זה הרבה בבת אחת — גררו במנות קטנות יותר, או השתמשו ב“בחירת תיקיית הטיול”.",
     "setup.js.no_media": "אין תמונות או סרטונים בבחירה הזו.",
     "setup.wiz.looks_right": "נראה טוב — המשך",
+    "setup.wiz.step_of": "שלב {n} מתוך {total}",
+    "setup.wiz.pick_to_continue": "בחרו תיקייה או הוסיפו קבצים כדי להמשיך.",
     "setup.wiz.trouble": "מתקשים למצוא את כל התמונות?",
     "setup.wiz.group_label": "קבצו תמונות שצולמו בתוך (דקות)",
     "setup.wiz.exclude_label": "דלגו על תת-התיקיות האלה",
@@ -1082,6 +1119,9 @@ _HE = {
 
     # review
     "review.title": "וידאו טיול — סקירה",
+    "review.tab": "סקירה",
+    "review.lb_prev": "התמונה הקודמת",
+    "review.lb_next": "התמונה הבאה",
     "review.kicker": "סקירה ואצירה",
     "review.in_film": "פריטים בסרט שלכם",
     "review.skipped": "{n} קבצים דולגו במהלך הייבוא",
@@ -1092,6 +1132,7 @@ _HE = {
     "review.regroup": "קיבוץ מחדש",
     "review.regroup_note": "מקבץ תמונות לתחנות לפי זמן. משפיע רק על תחנות שאין להן עדיין מקום.",
     "review.opening": "שקופית פתיחה",
+    "review.autosaves": "נשמר אוטומטית",
     "review.opening_sub": "— הדבר הראשון שהצופים רואים",
     "review.save_opening": "שמירת פתיחה",
     "review.unassigned": "תמונות וסרטונים לא משויכים",
@@ -1203,6 +1244,13 @@ _HE = {
     "finish.none": "עדיין אין סרט.",
     "finish.go_preview": "בניית תצוגה →",
     "finish.saved_to": "נשמר ב-{dir} · שום דבר לא עוזב את המחשב",
+    "finish.not_built": "הסרט שלכם עדיין לא נבנה",
+    "finish.stale_badge": "לא מעודכן",
+    "finish.stale_note": "שיניתם את ה\"סיפור\" מאז שהסרט הזה נוצר — בנו מחדש כדי להחיל את השינויים.",
+    "preview.fresh": "מעודכן עם ה\"סיפור\" שלכם.",
+    "preview.stale": "ה\"סיפור\" שלכם השתנה — בנו מחדש כדי להחיל את השינויים.",
+    "preview.build_reason": "הוסיפו קודם תמונות ב\"סיפור\".",
+    "preview.render_scope": "חל על הסרט הסופי — הטיוטה המהירה תמיד מהירה.",
     # projects (multi-project library + chooser)
     "projects.title": "סרטוני הטיולים שלכם",
     "projects.sub": "המשיכו מהמקום שבו הפסקתם, פתחו סרט מוגמר, או התחילו חדש.",
@@ -1216,7 +1264,8 @@ _HE = {
     "projects.new": "התחלת פרויקט חדש",
     "projects.new_ph": "שם לטיול (למשל פורטוגל 2023)",
     "projects.new_start": "יצירה",
-    "projects.switch": "פרויקטים…",
+    "projects.switch": "פרויקטי טיולים",
+    "projects.all": "כל הפרויקטים",
     "projects.rename": "שינוי שם",
     "projects.delete": "מחיקת פרויקט",
     "projects.rename_prompt": "שם חדש לפרויקט:",
@@ -1226,6 +1275,7 @@ _HE = {
     "projects.restore": "פתיחה",
     "review.select": "בחירה",
     "review.selected": "נבחרו",
+    "review.select_all": "בחירת הכול",
     "review.bulk_move": "העברה אל…",
     "review.bulk_add_person": "הוספת אדם…",
     "review.bulk_place_ph": "קביעת מקום…",
@@ -1278,7 +1328,7 @@ _HE = {
     "occasion.home_sub": "וידאו מתמונות של מישהו — שנאספות מהספרייה שלכם — ליום הולדת, יום נישואין או אזכרה.",
     "occasion.your": "האירועים שלכם",
     "occasion.none": "עדיין אין אירועים.",
-    "occasion.new": "אירוע חדש",
+    "occasion.new": "התחלת אירוע חדש",
     "occasion.new_title": "אירוע חדש",
     "occasion.new_sub": "בחרו למי זה, ואנחנו נאסוף את התמונות שלו מהספרייה שלכם.",
     "occasion.need_people": "רשמו תחילה את האדם כדי שאפשר יהיה למצוא את התמונות שלו.",
@@ -1312,6 +1362,9 @@ _HE = {
     "occasion.step_words": "כותרת ומסרים",
     "occasion.step_words_sub": "מילות הפתיחה והסיום. אפשר לערוך בהמשך.",
     "occasion.need_honoree": "בחרו קודם למי זה.",
+    "occasion.honoree_help": "בחרו אדם או קבוצה מתוך הרשומים — הפנים שלהם הן מה שהאיסוף מחפש.",
+    "occasion.honoree_nomatch": "אין עדיין אדם או קבוצה רשומים בשם הזה.",
+    "occasion.honoree_enroll": "רישום אדם חדש ←",
     "occasion.sample.birthday": "יום הולדת שמח",
     "occasion.sample.anniversary": "יום נישואין שמח",
     "occasion.sample.memorial": "לזכר",
@@ -1326,6 +1379,7 @@ _HE = {
     "occasion.style.mem_candle": "אור נרות",
     "occasion.cover_intro": "תמונת רקע לפתיחה (לא חובה)",
     "occasion.cover_outro": "תמונת רקע לסיום (לא חובה)",
+    "occasion.choose_cover": "בחירת תמונה",
     "occasion.cover_hint": "תמונה שתמלא את כרטיס הפתיחה/סיום מאחורי המילים. השאירו ריק לכרטיס רגיל.",
     "occasion.step_media": "הוספת מדיה",
     "occasion.step_media_sub": "קיבלתם תמונות ממשפחה וחברים? הוסיפו את התיקיות שלהם — נחפש גם בהן כשנאסוף את תמונות האדם.",
@@ -1370,6 +1424,24 @@ def get_lang(request) -> str:
     return lang if lang in LANGS else DEFAULT_LANG
 
 
+_MONTHS_FULL = {
+    "en": ["January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December"],
+    "he": ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי",
+           "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"],
+}
+_MONTHS_ABBR = {
+    "en": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "he": ["ינו׳", "פבר׳", "מרץ", "אפר׳", "מאי", "יוני", "יולי", "אוג׳", "ספט׳", "אוק׳", "נוב׳", "דצמ׳"],
+}
+
+
+def month_name(lang: str, month: int, abbr: bool = False) -> str:
+    """Localized Gregorian month name (month is 1-12); English fallback."""
+    tbl = _MONTHS_ABBR if abbr else _MONTHS_FULL
+    return tbl.get(lang, tbl["en"])[month - 1]
+
+
 def translator(lang: str):
     """Returns t(key, default=None, **kwargs): looks the key up in `lang`, then
     English, then `default`, then the key itself; formats {placeholders} from
@@ -1378,6 +1450,12 @@ def translator(lang: str):
 
     def t(key, default=None, **kwargs):
         s = table.get(key) or _EN.get(key) or default or key
+        # Pluralization: a string may carry "singular|plural"; with an `n` arg we
+        # pick the singular form only when n == 1. Strings without a pipe are
+        # untouched, so this is backward-compatible.
+        if "n" in kwargs and "|" in s:
+            singular, _, plural = s.partition("|")
+            s = singular if kwargs["n"] == 1 else plural
         if kwargs:
             try:
                 s = s.format(**kwargs)
